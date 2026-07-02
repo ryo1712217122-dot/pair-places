@@ -59,8 +59,8 @@ function initMap() {
         doubleClickZoom: false
     }).setView([35.6895, 139.6917], 13);
 
-    // Premium CartoDB Dark Matter tile layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Premium CartoDB Voyager tile layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
         maxZoom: 20
@@ -157,6 +157,38 @@ function setupEventListeners() {
             }
         }
     });
+
+    // Mobile Bottom Sheet Toggle
+    const sheetToggle = document.getElementById("sheet-toggle");
+    const sidebarSection = document.querySelector(".sidebar-section");
+    const handleArrow = document.getElementById("handle-arrow");
+
+    if (sheetToggle && sidebarSection) {
+        // Default to collapsed state on mobile screen sizes on load
+        if (window.innerWidth <= 900) {
+            sidebarSection.classList.add("collapsed");
+            if (handleArrow) {
+                handleArrow.setAttribute("data-lucide", "chevron-up");
+            }
+        } else {
+            if (handleArrow) {
+                handleArrow.setAttribute("data-lucide", "chevron-down");
+            }
+        }
+        lucide.createIcons();
+
+        sheetToggle.addEventListener("click", () => {
+            const isCollapsed = sidebarSection.classList.toggle("collapsed");
+            if (handleArrow) {
+                if (isCollapsed) {
+                    handleArrow.setAttribute("data-lucide", "chevron-up");
+                } else {
+                    handleArrow.setAttribute("data-lucide", "chevron-down");
+                }
+                lucide.createIcons();
+            }
+        });
+    }
 }
 
 // Save data helper for Cloud Sync Mode (Google Apps Script)
@@ -243,6 +275,11 @@ function getFilteredPlaces() {
 function renderPlacesList() {
     const filtered = getFilteredPlaces();
     placesCount.textContent = filtered.length;
+
+    const sheetCountVal = document.getElementById("sheet-count-val");
+    if (sheetCountVal) {
+        sheetCountVal.textContent = filtered.length;
+    }
 
     if (filtered.length === 0) {
         placesList.innerHTML = `
