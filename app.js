@@ -33,10 +33,15 @@ const placeForm = document.getElementById("place-form");
 const settingsForm = document.getElementById("settings-form");
 const commentForm = document.getElementById("comment-form");
 
-// Hybrid Storage Configuration
+// Hybrid Storage Configuration (Google Apps Script Backend)
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const CLOUD_BUCKET = "TJDyky5dMJEz5NhUFC5FJZ"; 
-const CLOUD_API = `https://kvdb.io/${CLOUD_BUCKET}/places_data`;
+let GAS_URL = "YOUR_GAS_WEB_APP_URL_HERE";
+
+// Load GAS URL from localStorage if saved by user in the Settings UI
+const savedGasUrl = localStorage.getItem("pairmap_gas_url");
+if (savedGasUrl) {
+    GAS_URL = savedGasUrl;
+}
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
@@ -154,22 +159,27 @@ function setupEventListeners() {
     });
 }
 
-// Save data helper for Cloud Sync Mode
+// Save data helper for Cloud Sync Mode (Google Apps Script)
 async function saveCloudData(data) {
     try {
-        const response = await fetch(CLOUD_API, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
+        if (!GAS_URL || GAS_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+            alert("Google Apps Script WebアプリのURLが設定されていません。右上の設定（歯車）から設定してください。");
+            return;
+        }
+        const response = await fetch(GAS_URL, {
+            method: "POST",
+            // We omit Content-Type: application/json to prevent browser sending OPTIONS preflight request,
+            // since GAS Web Apps do not handle preflight CORS requests properly.
             body: JSON.stringify(data)
         });
         if (!response.ok) throw new Error("クラウドへの保存に失敗しました");
     } catch (error) {
         console.error("Cloud Save Error:", error);
-        alert("データの保存に失敗しました。オフライン状態か、サービスが一時的に停止している可能性があります。");
+        alert("データの保存に失敗しました。URLが正しいか、GASデプロイ設定が「全員（Anyone）」になっているか確認してください。");
     }
 }
 
-// Fetch Data from Server or Cloud
+// Fetch Data from Server or GAS Cloud
 async function fetchData() {
     try {
         let data;
@@ -178,24 +188,21 @@ async function fetchData() {
             if (!response.ok) throw new Error("データの取得に失敗しました");
             data = await response.json();
         } else {
-            // Cloud storage mode (KVdb.io)
-            const response = await fetch(CLOUD_API);
-            if (response.status === 404) {
-                // Initialize default database on first connect
-                data = {
-                    settings: {
-                        user1: "パートナー1",
-                        user2: "パートナー2",
-                        title: "ふたりの行きたい場所マップ"
-                    },
-                    places: []
-                };
-                await saveCloudData(data);
-            } else if (!response.ok) {
-                throw new Error("クラウドデータの取得に失敗しました");
-            } else {
-                data = await response.json();
+            // Cloud storage mode (Google Apps Script)
+            if (!GAS_URL || GAS_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+                placesList.innerHTML = `
+                    <div class="list-placeholder">
+                        <i data-lucide="alert-triangle"></i>
+                        <p style="font-weight: 500; color: var(--warning);">Google Apps ScriptのURLが未設定です。</p>
+                        <p style="font-size: 0.75rem; color: var(--text-secondary);">右上の歯車アイコンをクリックし、GASのウェブアプリURLを入力・保存してください。</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
             }
+            const response = await fetch(GAS_URL);
+            if (!response.ok) throw new Error("クラウドデータの取得に失敗しました");
+            data = await response.json();
         }
         
         places = data.places || [];
@@ -377,6 +384,7 @@ function openModal(modal) {
     modal.classList.add("active");
 }
 
+// Close modal
 function closeModal(modal) {
     modal.classList.remove("active");
 }
@@ -532,6 +540,7 @@ function openSettingsModal() {
     document.getElementById("settings-app-title").value = settings.title;
     document.getElementById("settings-user1").value = settings.user1;
     document.getElementById("settings-user2").value = settings.user2;
+    document.getElementById("settings-gas-url").value = GAS_URL === "YOUR_GAS_WEB_APP_URL_HERE" ? "" : GAS_URL;
     openModal(settingsModal);
 }
 
@@ -604,7 +613,6 @@ async function handlePlaceFormSubmit(e) {
 
     try {
         if (isLocal) {
-            // Local server API
             let response;
             if (placeId) {
                 response = await fetch(`/api/places/${placeId}`, {
@@ -632,7 +640,7 @@ async function handlePlaceFormSubmit(e) {
                 openDetailModal(placeId);
             }
         } else {
-            // Cloud storage mode
+            // Cloud storage mode (GAS)
             if (placeId) {
                 const place = places.find(p => p.id === placeId);
                 if (place) {
@@ -696,6 +704,16 @@ async function handleSettingsFormSubmit(e) {
     const appTitle = document.getElementById("settings-app-title").value;
     const u1 = document.getElementById("settings-user1").value;
     const u2 = document.getElementById("settings-user2").value;
+    const gasUrl = document.getElementById("settings-gas-url").value.trim();
+
+    // Update locally and in localStorage
+    if (gasUrl) {
+        localStorage.setItem("pairmap_gas_url", gasUrl);
+        GAS_URL = gasUrl;
+    } else {
+        localStorage.removeItem("pairmap_gas_url");
+        GAS_URL = "YOUR_GAS_WEB_APP_URL_HERE";
+    }
 
     const newSettings = { title: appTitle, user1: u1, user2: u2 };
 
