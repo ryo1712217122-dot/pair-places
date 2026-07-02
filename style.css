@@ -775,6 +775,10 @@ button {
     overflow: hidden;
     transform: translateY(20px);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-overlay.active .modal-card {
@@ -788,6 +792,7 @@ button {
     justify-content: space-between;
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -816,6 +821,53 @@ button {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    overflow-y: auto;
+}
+
+/* Location Search Utility in Modal */
+.search-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.search-input-wrapper input {
+    flex: 1;
+}
+
+.search-results-list {
+    max-height: 140px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    margin-top: 0.4rem;
+    display: none;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+}
+
+.search-result-item {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    color: var(--text-primary);
+    transition: background 0.15s ease;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.form-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 0.5rem 0;
 }
 
 .form-group {

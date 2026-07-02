@@ -115,6 +115,19 @@ function setupEventListeners() {
         document.getElementById("place-lng").value = center.lng.toFixed(6);
     });
 
+    // Location Search in Modal
+    const searchBtn = document.getElementById("location-search-btn");
+    const searchInput = document.getElementById("location-search-input");
+    if (searchBtn && searchInput) {
+        searchBtn.addEventListener("click", handleLocationSearch);
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                handleLocationSearch();
+            }
+        });
+    }
+
     const categoryChips = document.querySelectorAll(".filter-chip");
     categoryChips.forEach(chip => {
         chip.addEventListener("click", () => {
@@ -435,6 +448,15 @@ function openAddPlaceModal(lat = null, lng = null) {
     document.getElementById("place-url").value = "";
     document.getElementById("place-image-url").value = "";
     
+    // Reset location search fields
+    const searchInput = document.getElementById("location-search-input");
+    const resultsList = document.getElementById("search-results-list");
+    if (searchInput && resultsList) {
+        searchInput.value = "";
+        resultsList.innerHTML = "";
+        resultsList.style.display = "none";
+    }
+    
     const center = map.getCenter();
     document.getElementById("place-lat").value = lat !== null ? lat.toFixed(6) : center.lat.toFixed(6);
     document.getElementById("place-lng").value = lng !== null ? lng.toFixed(6) : center.lng.toFixed(6);
@@ -563,6 +585,15 @@ function openEditPlaceModal(place) {
     document.getElementById("place-image-url").value = place.imageUrl || "";
     document.getElementById("place-lat").value = place.latitude;
     document.getElementById("place-lng").value = place.longitude;
+    
+    // Reset location search fields
+    const searchInput = document.getElementById("location-search-input");
+    const resultsList = document.getElementById("search-results-list");
+    if (searchInput && resultsList) {
+        searchInput.value = "";
+        resultsList.innerHTML = "";
+        resultsList.style.display = "none";
+    }
     
     document.querySelector(`input[name="place-status"][value="${place.status}"]`).checked = true;
     
@@ -910,4 +941,66 @@ function escapeHTML(str) {
             '"': '&quot;'
         }[tag] || tag)
     );
+}
+
+// Location Search using Nominatim OpenStreetMap API
+async function handleLocationSearch() {
+    const query = document.getElementById("location-search-input").value.trim();
+    const resultsList = document.getElementById("search-results-list");
+    
+    if (!query) return;
+
+    resultsList.innerHTML = `<div style="padding: 0.65rem 0.85rem; font-size: 0.8rem; color: var(--text-muted);">検索中...</div>`;
+    resultsList.style.display = "flex";
+
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`, {
+            headers: {
+                'Accept-Language': 'ja,en;q=0.9'
+            }
+        });
+        if (!response.ok) throw new Error("検索エラー");
+        const results = await response.json();
+
+        if (results.length === 0) {
+            resultsList.innerHTML = `<div style="padding: 0.65rem 0.85rem; font-size: 0.8rem; color: var(--text-muted);">候補が見つかりませんでした。</div>`;
+            return;
+        }
+
+        resultsList.innerHTML = "";
+        results.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "search-result-item";
+            div.textContent = item.display_name;
+            div.addEventListener("click", () => {
+                // Autofill coordinates
+                document.getElementById("place-lat").value = parseFloat(item.lat).toFixed(6);
+                document.getElementById("place-lng").value = parseFloat(item.lon).toFixed(6);
+                
+                // Extract clean title from display_name
+                const nameParts = item.display_name.split(',');
+                if (nameParts.length > 0) {
+                    const cleanName = nameParts[0].trim();
+                    // Set title if it is currently empty
+                    if (!document.getElementById("place-title").value) {
+                        document.getElementById("place-title").value = cleanName;
+                    }
+                    document.getElementById("location-search-input").value = cleanName;
+                }
+
+                // Hide results and center map
+                resultsList.innerHTML = "";
+                resultsList.style.display = "none";
+                
+                // Pan map preview to selected coords
+                if (map) {
+                    map.setView([parseFloat(item.lat), parseFloat(item.lon)], 16);
+                }
+            });
+            resultsList.appendChild(div);
+        });
+    } catch (error) {
+        console.error("Search error:", error);
+        resultsList.innerHTML = `<div style="padding: 0.65rem 0.85rem; font-size: 0.8rem; color: var(--danger);">検索中にエラーが発生しました。</div>`;
+    }
 }
