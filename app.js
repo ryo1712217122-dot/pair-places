@@ -35,7 +35,7 @@ const commentForm = document.getElementById("comment-form");
 
 // Hybrid Storage Configuration
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const CLOUD_BUCKET = "pm_596896be_d3f6_4567_b184_67ab0a0b8f98"; 
+const CLOUD_BUCKET = "TJDyky5dMJEz5NhUFC5FJZ"; 
 const CLOUD_API = `https://kvdb.io/${CLOUD_BUCKET}/places_data`;
 
 // Initialize App
