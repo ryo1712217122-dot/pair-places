@@ -907,13 +907,18 @@ button {
 
 .form-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
     width: 100%;
 }
 
 .form-row .form-group {
     flex: 1;
-    min-width: 0;
+    min-width: 180px;
+}
+
+.geo-coords .form-group {
+    min-width: 100px;
 }
 
 .form-row .flex-2 { flex: 2; }
@@ -1380,6 +1385,9 @@ textarea:focus {
         transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         background: rgba(255, 255, 255, 0.95);
         box-shadow: 0 -8px 32px rgba(28, 26, 36, 0.12);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
     
     /* Collapsed state - pushes sheet down so only the handle is visible */
@@ -1463,7 +1471,7 @@ textarea:focus {
     }
     
     .places-list {
-        padding: 0.5rem 0.75rem 1rem;
+        padding: 0.5rem 0.75rem 120px !important;
     }
     
     .modal-card {
