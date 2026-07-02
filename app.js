@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function initMap() {
     map = L.map("map", {
         doubleClickZoom: false
-    }).setView([35.6895, 139.6917], 13);
+    }).setView([35.6895, 139.6917], 11);
 
     // Premium CartoDB Voyager tile layer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -216,7 +216,7 @@ function setupEventListeners() {
         }
     });
 
-    // Mobile Bottom Sheet Toggle
+    // Mobile Bottom Sheet Toggle & Touch Swipe Drag Gesture
     const sheetToggle = document.getElementById("sheet-toggle");
     const sidebarSection = document.querySelector(".sidebar-section");
     const handleArrow = document.getElementById("handle-arrow");
@@ -235,8 +235,22 @@ function setupEventListeners() {
         }
         lucide.createIcons();
 
-        sheetToggle.addEventListener("click", () => {
-            const isCollapsed = sidebarSection.classList.toggle("collapsed");
+        // Click to toggle
+        sheetToggle.addEventListener("click", (e) => {
+            if (wasDragging) return;
+            toggleBottomSheet();
+        });
+
+        function toggleBottomSheet(forceState = null) {
+            let isCollapsed;
+            if (forceState !== null) {
+                isCollapsed = forceState;
+                sidebarSection.classList.toggle("collapsed", isCollapsed);
+            } else {
+                isCollapsed = sidebarSection.classList.toggle("collapsed");
+            }
+            
+            sidebarSection.style.transform = ""; // Reset inline drag style to let CSS handle it
             if (handleArrow) {
                 if (isCollapsed) {
                     handleArrow.setAttribute("data-lucide", "chevron-up");
@@ -245,7 +259,77 @@ function setupEventListeners() {
                 }
                 lucide.createIcons();
             }
-        });
+        }
+
+        // Swipe Drag Gesture variables
+        let startY = 0;
+        let isDragging = false;
+        let wasDragging = false;
+        let startTranslateY = 0;
+        const sheetHeight = window.innerHeight * 0.7; // 70% height
+        const collapsedTranslateY = sheetHeight - 60; // 60px is handle bar height
+
+        sheetToggle.addEventListener("touchstart", (e) => {
+            if (window.innerWidth > 900) return;
+            startY = e.touches[0].clientY;
+            isDragging = true;
+            wasDragging = false;
+            
+            // Calculate starting translateY based on state
+            const isCollapsed = sidebarSection.classList.contains("collapsed");
+            startTranslateY = isCollapsed ? collapsedTranslateY : 0;
+            
+            sidebarSection.style.transition = "none"; // Disable CSS smooth transition during manual drag
+            e.stopPropagation();
+        }, { passive: true });
+
+        sheetToggle.addEventListener("touchmove", (e) => {
+            if (!isDragging) return;
+            const currentY = e.touches[0].clientY;
+            const deltaY = currentY - startY;
+            
+            // Mark as dragging if movement is meaningful (more than 5px)
+            if (Math.abs(deltaY) > 5) {
+                wasDragging = true;
+            }
+            
+            let targetTranslateY = startTranslateY + deltaY;
+            // Limit bounds: 0 (fully open) to collapsedTranslateY (fully closed)
+            targetTranslateY = Math.max(0, Math.min(collapsedTranslateY, targetTranslateY));
+            
+            sidebarSection.style.transform = `translateY(${targetTranslateY}px)`;
+            
+            // CRITICAL: Stop propagation to prevent Leaflet Map from capturing drag/pan event
+            e.stopPropagation();
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        sheetToggle.addEventListener("touchend", (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            sidebarSection.style.transition = ""; // Restore CSS smooth transition
+            
+            const currentY = e.changedTouches[0].clientY;
+            const deltaY = currentY - startY;
+            const isCollapsed = sidebarSection.classList.contains("collapsed");
+            
+            if (wasDragging) {
+                // Determine next state based on swipe direction and distance
+                if (isCollapsed && deltaY < -50) {
+                    // Swiped up: Expand
+                    toggleBottomSheet(false);
+                } else if (!isCollapsed && deltaY > 50) {
+                    // Swiped down: Collapse
+                    toggleBottomSheet(true);
+                } else {
+                    // Cancel swipe: Snap back to original state
+                    toggleBottomSheet(isCollapsed);
+                }
+            }
+            e.stopPropagation();
+        }, { passive: true });
     }
 }
 
@@ -465,10 +549,11 @@ function updateMapMarkers() {
 
     lucide.createIcons();
 
-    if (filtered.length > 0 && Object.keys(markers).length === filtered.length && !selectedPlaceId) {
-        const group = new L.featureGroup(Object.values(markers));
-        map.fitBounds(group.getBounds().pad(0.15));
-    }
+    // 自動フィット（fitBounds）はユーザーの意図しないズームを引き起こすため無効化
+    // if (filtered.length > 0 && Object.keys(markers).length === filtered.length && !selectedPlaceId) {
+    //     const group = new L.featureGroup(Object.values(markers));
+    //     map.fitBounds(group.getBounds().pad(0.15));
+    // }
 }
 
 // Select place in list and map
@@ -478,9 +563,12 @@ function selectPlace(placeId, zoom = true) {
     updateMapMarkers();
 
     const place = places.find(p => p.id === placeId);
-    if (place && markers[placeId]) {
-        if (zoom) {
-            map.setView([place.latitude, place.longitude], 15);
+    if (place) {
+        // todoタイプの場合は地図ピンがないのでズームをスキップ
+        if (place.type !== "todo" && markers[placeId]) {
+            if (zoom) {
+                map.setView([place.latitude, place.longitude], 15);
+            }
         }
         openDetailModal(placeId);
     }
@@ -530,6 +618,9 @@ function openAddPlaceModal(lat = null, lng = null) {
     
     toggleModalLocationFields("place");
     
+    // 新規追加時はステータスグループを非表示にする（初期値「行きたい」で固定）
+    document.getElementById("modal-status-group").style.display = "none";
+
     document.getElementById("modal-title").textContent = "新規追加";
     document.getElementById("save-place-btn").textContent = "保存する";
     
@@ -685,6 +776,9 @@ function openEditPlaceModal(place) {
     });
     
     toggleModalLocationFields(placeType);
+
+    // 編集時はステータス変更を行えるようにステータスグループを表示する
+    document.getElementById("modal-status-group").style.display = "flex";
 
     document.getElementById("modal-title").textContent = "スポット情報を編集";
     document.getElementById("save-place-btn").textContent = "変更を保存";
@@ -1038,7 +1132,7 @@ async function handleLocationSearch() {
     resultsList.style.display = "flex";
 
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&countrycodes=jp`, {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=35&countrycodes=jp&addressdetails=1`, {
             headers: {
                 'Accept-Language': 'ja,en;q=0.9'
             }
@@ -1051,8 +1145,33 @@ async function handleLocationSearch() {
             return;
         }
 
+        // 観光スポットや施設（POI）を優先するカスタムソート
+        results.sort((a, b) => {
+            const getPoiScore = (item) => {
+                const c = item.class || "";
+                const t = item.type || "";
+                // 行政区画や郵便番号などは最も優先度を下げる
+                if (c === "boundary" || (c === "place" && ["city", "province", "state", "country", "postcode", "administrative", "quarter", "suburb", "neighbourhood", "island"].includes(t))) {
+                    return 1;
+                }
+                // 具体的な施設、観光地、店舗は最優先
+                if (["tourism", "amenity", "leisure", "shop", "historic", "building"].includes(c)) {
+                    return 10;
+                }
+                // 交通機関（駅など）も優先
+                if (["railway", "highway"].includes(c)) {
+                    return 8;
+                }
+                return 5;
+            };
+            return getPoiScore(b) - getPoiScore(a);
+        });
+
+        // 上位10件に絞り込む
+        const finalResults = results.slice(0, 10);
+
         resultsList.innerHTML = "";
-        results.forEach(item => {
+        finalResults.forEach(item => {
             const div = document.createElement("div");
             div.className = "search-result-item";
             div.textContent = item.display_name;
