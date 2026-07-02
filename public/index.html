@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PairMap - ふたりの行きたい場所共有アプリ</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+          
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i data-lucide="map-pin" class="logo-icon"></i>
+                <h1 id="app-title-display">ふたりの行きたい場所マップ</h1>
+            </div>
+            
+            <div class="header-controls">
+                <!-- User Toggle Switch -->
+                <div class="user-selector-container">
+                    <span class="user-label" id="user1-label">パートナー1</span>
+                    <button class="user-toggle-btn" id="user-toggle" aria-label="ユーザー切り替え">
+                        <span class="user-toggle-slider"></span>
+                    </button>
+                    <span class="user-label" id="user2-label">パートナー2</span>
+                </div>
+                
+                <!-- Action Buttons -->
+                <button class="icon-btn" id="settings-btn" title="設定">
+                    <i data-lucide="settings"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Body -->
+        <main class="app-main">
+            <!-- Sidebar (List and Controls) -->
+            <section class="sidebar-section">
+                <!-- Top Buttons -->
+                <div class="sidebar-actions">
+                    <button class="primary-btn" id="add-place-btn">
+                        <i data-lucide="plus-circle"></i>場所を追加する
+                    </button>
+                    <button class="secondary-btn" id="roulette-btn">
+                        <i data-lucide="dices"></i>ルーレットで決める
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label>カテゴリ</label>
+                        <div class="category-filters">
+                            <button class="filter-chip active" data-filter-category="all">すべて</button>
+                            <button class="filter-chip" data-filter-category="food"><span class="chip-dot dot-food"></span>グルメ</button>
+                            <button class="filter-chip" data-filter-category="scenic"><span class="chip-dot dot-scenic"></span>絶景・観光</button>
+                            <button class="filter-chip" data-filter-category="activity"><span class="chip-dot dot-activity"></span>遊ぶ・体験</button>
+                            <button class="filter-chip" data-filter-category="shopping"><span class="chip-dot dot-shopping"></span>お買い物</button>
+                            <button class="filter-chip" data-filter-category="lodging"><span class="chip-dot dot-lodging"></span>宿泊</button>
+                            <button class="filter-chip" data-filter-category="other"><span class="chip-dot dot-other"></span>その他</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>ステータス</label>
+                        <div class="status-filters">
+                            <button class="status-tab active" data-filter-status="all">すべて</button>
+                            <button class="status-tab" data-filter-status="want_to_go">行きたい</button>
+                            <button class="status-tab" data-filter-status="visited">行った！</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Places List -->
+                <div class="places-list-container">
+                    <div class="list-header">
+                        <h2>スポット一覧 (<span id="places-count">0</span>)</h2>
+                    </div>
+                    <div class="places-list" id="places-list">
+                        <!-- Place Cards get injected here -->
+                        <div class="list-placeholder">
+                            <i data-lucide="map"></i>
+                            <p>まだスポットが登録されていません。<br>地図をクリックするか「場所を追加する」から登録してください。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Map View -->
+            <section class="map-section">
+                <div id="map"></div>
+                <div class="map-helper">
+                    <i data-lucide="info" size="14"></i>
+                    <span>地図上をダブルクリック（または長押し）して、新しいスポットを直接ピン留めできます。</span>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Add/Edit Place Modal -->
+    <div class="modal-overlay" id="place-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="modal-title">新しい場所を追加</h2>
+                <button class="close-modal-btn" id="close-place-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="place-form" class="modal-body">
+                <input type="hidden" id="place-id">
+                
+                <div class="form-row">
+                    <div class="form-group flex-2">
+                        <label for="place-title">スポット名 <span class="required">*</span></label>
+                        <input type="text" id="place-title" placeholder="例: 絶品フレンチトーストカフェ" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="place-category">カテゴリ</label>
+                        <select id="place-category">
+                            <option value="food">グルメ</option>
+                            <option value="scenic">絶景・観光</option>
+                            <option value="activity">遊ぶ・体験</option>
+                            <option value="shopping">お買い物</option>
+                            <option value="lodging">宿泊</option>
+                            <option value="other" selected>その他</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="place-description">メモ・紹介文</label>
+                    <textarea id="place-description" rows="3" placeholder="ここで行きたいこと、食べたいもの、目的など…"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="place-url">参考URL</label>
+                        <input type="url" id="place-url" placeholder="https://instagram.com/...">
+                    </div>
+                    <div class="form-group">
+                        <label for="place-image-url">画像URL (空白で自動設定)</label>
+                        <input type="url" id="place-image-url" placeholder="https://images.unsplash.com/...">
+                    </div>
+                </div>
+
+                <div class="form-row geo-coords">
+                    <div class="form-group">
+                        <label for="place-lat">緯度 (Latitude)</label>
+                        <input type="number" id="place-lat" step="any" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="place-lng">経度 (Longitude)</label>
+                        <input type="number" id="place-lng" step="any" required>
+                    </div>
+                    <button type="button" class="icon-btn select-map-coord" id="get-center-coord" title="地図の中心座標を入力">
+                        <i data-lucide="crosshair"></i>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>ステータス</label>
+                    <div class="status-selector">
+                        <label class="radio-label">
+                            <input type="radio" name="place-status" value="want_to_go" checked>
+                            <span class="status-badge want_to_go">行きたい</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="place-status" value="visited">
+                            <span class="status-badge visited">行った！</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="text-btn" id="cancel-place-form">キャンセル</button>
+                    <button type="submit" class="primary-btn" id="save-place-btn">保存する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Place Details & Comments Modal -->
+    <div class="modal-overlay" id="detail-modal">
+        <div class="modal-card detail-modal-card">
+            <button class="close-modal-btn detail-close-btn" id="close-detail-modal">
+                <i data-lucide="x"></i>
+            </button>
+            <div class="detail-header-image" id="detail-image"></div>
+            
+            <div class="modal-body detail-body">
+                <div class="detail-main-info">
+                    <div class="detail-meta">
+                        <span class="category-badge" id="detail-category-badge">カテゴリ</span>
+                        <span class="status-badge" id="detail-status-badge">ステータス</span>
+                    </div>
+                    <h2 id="detail-title">スポット名</h2>
+                    <p class="proposed-by" id="detail-proposed-by">投稿者: パートナー1</p>
+                    <p class="detail-description" id="detail-description">説明文が入ります。</p>
+                    
+                    <div class="detail-links" id="detail-links">
+                        <!-- Links get injected here if present -->
+                    </div>
+                    
+                    <div class="detail-actions">
+                        <button class="icon-btn-text" id="detail-edit-btn">
+                            <i data-lucide="edit-3"></i>編集する
+                        </button>
+                        <button class="icon-btn-text danger" id="detail-delete-btn">
+                            <i data-lucide="trash-2"></i>削除する
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="detail-divider">
+
+                <!-- Comments Section -->
+                <div class="detail-comments-section">
+                    <h3>コメント・相談 (<span id="comments-count">0</span>)</h3>
+                    <div class="comments-list" id="comments-list">
+                        <!-- Comments get injected here -->
+                    </div>
+                    <form id="comment-form" class="comment-input-area">
+                        <input type="text" id="comment-text" placeholder="ここにコメントを入力..." required autocomplete="off">
+                        <button type="submit" class="primary-btn send-comment-btn" aria-label="送信">
+                            <i data-lucide="send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>設定変更</h2>
+                <button class="close-modal-btn" id="close-settings-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="settings-form" class="modal-body">
+                <div class="form-group">
+                    <label for="settings-app-title">アプリのタイトル</label>
+                    <input type="text" id="settings-app-title" value="ふたりの行きたい場所マップ" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="settings-user1">パートナー1 の名前</label>
+                        <input type="text" id="settings-user1" value="パートナー1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings-user2">パートナー2 の名前</label>
+                        <input type="text" id="settings-user2" value="パートナー2" required>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="text-btn" id="cancel-settings-form">キャンセル</button>
+                    <button type="submit" class="primary-btn">設定を保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Roulette Modal -->
+    <div class="modal-overlay" id="roulette-modal">
+        <div class="modal-card roulette-modal-card">
+            <div class="modal-header">
+                <h2>今日どこ行く？ルーレット</h2>
+                <button class="close-modal-btn" id="close-roulette-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body roulette-body">
+                <p class="roulette-instruction">登録された「行きたい」スポットから、本日の行き先をランダムで決定します！</p>
+                
+                <div class="roulette-display-container">
+                    <div class="roulette-wheel" id="roulette-wheel">
+                        <div class="roulette-card-spin" id="roulette-spin-card">
+                            <span class="spin-category">カテゴリ</span>
+                            <span class="spin-title">？</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="roulette-controls">
+                    <button class="primary-btn xl-btn" id="start-roulette-btn">
+                        <i data-lucide="play-circle"></i>ルーレットを回す！
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet.js Script -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+            
+    <!-- Custom JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

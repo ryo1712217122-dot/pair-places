@@ -1,0 +1,19 @@
+{
+  "name": "pair-places",
+  "version": "1.0.0",
+  "description": "2人で「行きたい場所」を共有するWebアプリ",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "share": "node server.js --share"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "localtunnel": "^2.0.2"
+  },
+  "author": "",
+  "license": "ISC"
+}
