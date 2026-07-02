@@ -4,8 +4,8 @@ import os
 import sys
 
 PORT = 8000
-DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data.json')
-PUBLIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'public')
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(PROJECT_DIR, 'data.json')
 
 def load_data():
     if not os.path.exists(DATA_FILE):
@@ -23,7 +23,6 @@ def load_data():
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception:
-        # Fallback if file is corrupted
         return {"settings": {"user1": "パートナー1", "user2": "パートナー2", "title": "ふたりの行きたい場所マップ"}, "places": []}
 
 def save_data(data):
@@ -31,17 +30,7 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        # We initialize it with the directory pointing to the parent folder
-        # but we'll override translate_path to serve from PUBLIC_DIR
-        super().__init__(*args, **kwargs)
-
     def translate_path(self, path):
-        # Prevent accessing files outside of public folder for security,
-        # unless it is an API call (which won't call translate_path)
-        # Standard translate_path maps '/index.html' -> '/path/to/project/index.html'
-        # We want to map it to '/path/to/project/public/index.html'
-        
         # Parse query params out of path if any
         if '?' in path:
             path = path.split('?', 1)[0]
@@ -53,18 +42,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         
         # If requesting root, map to index.html
         if path == '/' or path == '.' or path == '\\':
-            return os.path.join(PUBLIC_DIR, 'index.html')
+            return os.path.join(PROJECT_DIR, 'index.html')
         
-        # If path starts with /public, strip it so we don't double nest
-        if path.startswith('/public'):
-            path = path[7:]
-        elif path.startswith('\\public'):
-            path = path[7:]
-            
         if path.startswith('/') or path.startswith('\\'):
             path = path[1:]
             
-        target = os.path.join(PUBLIC_DIR, path)
+        target = os.path.join(PROJECT_DIR, path)
         return target
 
     def end_headers(self):
@@ -80,6 +63,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        # Prevent access to source files, JSON database, shell scripts, and git configs
+        path_lower = self.path.lower()
+        if '..' in self.path or any(path_lower.endswith(ext) for ext in ['.py', '.json', '.sh', '.git', '.pyc']) or '/.' in self.path:
+            self.send_error_response(403, "Access Forbidden")
+            return
+
         # Route API requests
         if self.path.startswith('/api/data'):
             self.send_response(200)
@@ -88,11 +77,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             data = load_data()
             self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
         else:
-            # Serve static files from 'public' directory via SimpleHTTPRequestHandler
+            # Serve static files from root directory
             super().do_GET()
 
     def do_POST(self):
-        # Read body content
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length).decode('utf-8')
         try:
@@ -106,7 +94,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             data = load_data()
             import uuid
             new_place = {
-                "id": str(uuid.uuid4())[:8], # Short unique ID
+                "id": str(uuid.uuid4())[:8],
                 "title": req_data.get("title", "無題のスポット").strip(),
                 "description": req_data.get("description", "").strip(),
                 "category": req_data.get("category", "other"),
@@ -115,11 +103,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 "latitude": float(req_data.get("latitude", 35.6895)),
                 "longitude": float(req_data.get("longitude", 139.6917)),
                 "proposedBy": req_data.get("proposedBy", "user1"),
-                "status": req_data.get("status", "want_to_go"), # want_to_go, visited
+                "status": req_data.get("status", "want_to_go"),
                 "comments": [],
                 "createdAt": req_data.get("createdAt", "")
             }
-            # Provide default category image if none provided
             if not new_place["imageUrl"]:
                 cat_images = {
                     "food": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=60",
@@ -136,7 +123,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json_response({"success": True, "place": new_place})
 
         elif self.path.startswith('/api/places/') and self.path.endswith('/comments'):
-            # Add comment: /api/places/<id>/comments
             parts = self.path.split('/')
             place_id = parts[3]
             data = load_data()
@@ -164,7 +150,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error_response(404, "Place not found")
 
         elif self.path == '/api/settings':
-            # Update settings
             data = load_data()
             data["settings"]["user1"] = req_data.get("user1", data["settings"]["user1"]).strip()
             data["settings"]["user2"] = req_data.get("user2", data["settings"]["user2"]).strip()
@@ -184,14 +169,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         if self.path.startswith('/api/places/'):
-            # Update place: /api/places/<id>
             parts = self.path.split('/')
             place_id = parts[3]
             data = load_data()
             found = False
             for place in data["places"]:
                 if place["id"] == place_id:
-                    # Update fields
                     if "title" in req_data: place["title"] = req_data["title"].strip()
                     if "description" in req_data: place["description"] = req_data["description"].strip()
                     if "category" in req_data: place["category"] = req_data["category"]
@@ -212,7 +195,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_DELETE(self):
         if self.path.startswith('/api/places/'):
-            # Delete place: /api/places/<id>
             parts = self.path.split('/')
             place_id = parts[3]
             data = load_data()
@@ -239,11 +221,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps({"error": message}, ensure_ascii=False).encode('utf-8'))
 
 if __name__ == '__main__':
-    # Ensure public dir exists
-    os.makedirs(PUBLIC_DIR, exist_ok=True)
-    # Load data once to verify/generate file
     load_data()
-    
     server_address = ('', PORT)
     httpd = http.server.HTTPServer(server_address, CustomHandler)
     print(f"Server running on port {PORT}...")
