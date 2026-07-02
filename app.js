@@ -142,9 +142,11 @@ function setupEventListeners() {
         tab.addEventListener("click", () => {
             modalTypeTabs.forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
+            const typeVal = tab.getAttribute("data-type-val");
             if (placeTypeInput) {
-                placeTypeInput.value = tab.getAttribute("data-type-val");
+                placeTypeInput.value = typeVal;
             }
+            toggleModalLocationFields(typeVal);
         });
     });
 
@@ -397,7 +399,8 @@ function renderPlacesList(filtered = getFilteredPlaces()) {
 // Update Map Markers
 function updateMapMarkers() {
     const filtered = getFilteredPlaces();
-    const filteredIds = new Set(filtered.map(p => p.id));
+    const mapPlaces = filtered.filter(p => p.type !== "todo");
+    const filteredIds = new Set(mapPlaces.map(p => p.id));
 
     // Clear deleted/filtered markers
     Object.keys(markers).forEach(id => {
@@ -408,7 +411,7 @@ function updateMapMarkers() {
     });
 
     // Add or update markers
-    filtered.forEach(place => {
+    mapPlaces.forEach(place => {
         const isSelected = selectedPlaceId === place.id;
         const markerClass = `marker-pin ${place.category} ${place.status} ${isSelected ? "selected" : ""}`;
         
@@ -523,7 +526,9 @@ function openAddPlaceModal(lat = null, lng = null) {
         t.classList.toggle("active", t.getAttribute("data-status-val") === "want_to_go");
     });
     
-    document.getElementById("modal-title").textContent = "新しい場所を追加";
+    toggleModalLocationFields("place");
+    
+    document.getElementById("modal-title").textContent = "新規追加";
     document.getElementById("save-place-btn").textContent = "保存する";
     
     openModal(placeModal);
@@ -672,6 +677,8 @@ function openEditPlaceModal(place) {
         t.classList.toggle("active", t.getAttribute("data-status-val") === place.status);
     });
     
+    toggleModalLocationFields(placeType);
+
     document.getElementById("modal-title").textContent = "スポット情報を編集";
     document.getElementById("save-place-btn").textContent = "変更を保存";
     
@@ -1085,5 +1092,28 @@ async function handleLocationSearch() {
     } catch (error) {
         console.error("Search error:", error);
         resultsList.innerHTML = `<div style="padding: 0.65rem 0.85rem; font-size: 0.8rem; color: var(--danger);">検索中にエラーが発生しました。</div>`;
+    }
+}
+
+// Show/Hide location inputs in Add/Edit form depending on Type (place vs todo)
+function toggleModalLocationFields(type) {
+    const searchGroup = document.querySelector(".search-coords-group");
+    const divider = document.querySelector(".form-divider");
+    const coordsGroup = document.querySelector(".geo-coords");
+    
+    if (type === "todo") {
+        if (searchGroup) searchGroup.style.display = "none";
+        if (divider) divider.style.display = "none";
+        if (coordsGroup) coordsGroup.style.display = "none";
+        
+        document.getElementById("place-lat").required = false;
+        document.getElementById("place-lng").required = false;
+    } else {
+        if (searchGroup) searchGroup.style.display = "block";
+        if (divider) divider.style.display = "block";
+        if (coordsGroup) coordsGroup.style.display = "flex";
+        
+        document.getElementById("place-lat").required = true;
+        document.getElementById("place-lng").required = true;
     }
 }
