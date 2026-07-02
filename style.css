@@ -214,6 +214,16 @@ body {
     box-shadow: var(--shadow-md);
 }
 
+.sidebar-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
 .sidebar-actions {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
@@ -1371,6 +1381,9 @@ textarea:focus {
     
     /* Sidebar becomes a Native-like Bottom Sheet overlaying the map */
     .sidebar-section {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
         position: absolute;
         bottom: 0;
         left: 0;
@@ -1450,6 +1463,29 @@ textarea:focus {
 
     .places-list {
         padding-bottom: 120px !important;
+    }
+
+    .sidebar-body {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        padding: 1rem;
+        box-sizing: border-box;
+    }
+
+    .places-list-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .places-list-container {
+        flex: 1;
+        overflow-y: auto !important;
+        min-height: 0;
     }
 }
 
