@@ -35,7 +35,7 @@ const commentForm = document.getElementById("comment-form");
 
 // Hybrid Storage Configuration (Google Apps Script Backend)
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-let GAS_URL = "YOUR_GAS_WEB_APP_URL_HERE";
+let GAS_URL = "https://script.google.com/macros/s/AKfycbzT16zPcMljjlXR4mbjzecyPpxRbAmvCV3VODr90V64aDRhhlhwFAcXH1O9HAtIumUS/exec";
 
 // Load GAS URL from localStorage if saved by user in the Settings UI
 const savedGasUrl = localStorage.getItem("pairmap_gas_url");
