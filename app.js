@@ -374,8 +374,10 @@ function renderPlacesList(filtered = getFilteredPlaces()) {
         const typeLabel = place.type === "todo" ? "やりたいこと" : "行きたい場所";
         const typeClass = place.type === "todo" ? "todo" : "place";
 
+        const imageHTML = place.imageUrl ? `<div class="card-image" style="background-image: url('${place.imageUrl}')"></div>` : '';
+
         card.innerHTML = `
-            <div class="card-image" style="background-image: url('${place.imageUrl}')"></div>
+            ${imageHTML}
             <div class="card-info">
                 <div class="card-category-bar">
                     <div>
@@ -554,7 +556,12 @@ function openDetailModal(placeId) {
     const statusClass = place.status;
 
     const detailImage = document.getElementById("detail-image");
-    detailImage.style.backgroundImage = `url('${place.imageUrl}')`;
+    if (place.imageUrl) {
+        detailImage.style.display = "block";
+        detailImage.style.backgroundImage = `url('${place.imageUrl}')`;
+    } else {
+        detailImage.style.display = "none";
+    }
 
     const catBadge = document.getElementById("detail-category-badge");
     catBadge.className = `category-badge ${catInfo.class}`;
@@ -749,19 +756,6 @@ async function handlePlaceFormSubmit(e) {
         proposedBy: placeId ? undefined : currentUser,
         createdAt: placeId ? undefined : new Date().toISOString()
     };
-
-    // Auto-fill category-specific images if empty
-    if (!payload.imageUrl) {
-        const catImages = {
-            food: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=60",
-            scenic: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600&auto=format&fit=crop&q=60",
-            activity: "https://images.unsplash.com/photo-1530541930197-ff16ac917b0e?w=600&auto=format&fit=crop&q=60",
-            shopping: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&auto=format&fit=crop&q=60",
-            lodging: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&auto=format&fit=crop&q=60",
-            other: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&auto=format&fit=crop&q=60"
-        };
-        payload.imageUrl = catImages[category] || catImages.other;
-    }
 
     try {
         if (isLocal) {

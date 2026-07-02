@@ -108,17 +108,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 "comments": [],
                 "createdAt": req_data.get("createdAt", "")
             }
-            if not new_place["imageUrl"]:
-                cat_images = {
-                    "food": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=60",
-                    "scenic": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600&auto=format&fit=crop&q=60",
-                    "activity": "https://images.unsplash.com/photo-1530541930197-ff16ac917b0e?w=600&auto=format&fit=crop&q=60",
-                    "shopping": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&auto=format&fit=crop&q=60",
-                    "lodging": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&auto=format&fit=crop&q=60",
-                    "other": "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&auto=format&fit=crop&q=60"
-                }
-                new_place["imageUrl"] = cat_images.get(new_place["category"], cat_images["other"])
-
             data["places"].append(new_place)
             save_data(data)
             self.send_json_response({"success": True, "place": new_place})
