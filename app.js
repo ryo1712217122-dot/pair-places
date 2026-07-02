@@ -329,8 +329,11 @@ function getFilteredPlaces() {
 }
 
 // Render Place List Sidebar
-function renderPlacesList() {
-    const filtered = getFilteredPlaces();
+function renderPlacesList(filtered = getFilteredPlaces()) {
+    const listContainer = placesList;
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "";
     placesCount.textContent = filtered.length;
 
     const sheetCountVal = document.getElementById("sheet-count-val");
@@ -339,7 +342,7 @@ function renderPlacesList() {
     }
 
     if (filtered.length === 0) {
-        placesList.innerHTML = `
+        listContainer.innerHTML = `
             <div class="list-placeholder">
                 <i data-lucide="map-pin"></i>
                 <p>該当するスポットがありません。</p>
@@ -364,6 +367,8 @@ function renderPlacesList() {
             other: { label: "その他", class: "other" }
         };
         const catInfo = catMap[place.category] || catMap.other;
+        const statusLabel = place.status === "want_to_go" ? "行きたい" : "行った！";
+        const statusClass = place.status;
         const typeLabel = place.type === "todo" ? "やりたいこと" : "行きたい場所";
         const typeClass = place.type === "todo" ? "todo" : "place";
 
