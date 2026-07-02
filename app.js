@@ -1038,7 +1038,7 @@ async function handleLocationSearch() {
     resultsList.style.display = "flex";
 
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`, {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&countrycodes=jp`, {
             headers: {
                 'Accept-Language': 'ja,en;q=0.9'
             }

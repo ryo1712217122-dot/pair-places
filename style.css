@@ -841,9 +841,14 @@ button {
     flex-direction: column;
     gap: 1.25rem;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Location Search Utility in Modal */
+.search-coords-group {
+    position: relative;
+}
+
 .search-input-wrapper {
     display: flex;
     gap: 0.5rem;
@@ -854,15 +859,20 @@ button {
 }
 
 .search-results-list {
-    max-height: 140px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 180px;
     overflow-y: auto;
     background: white;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    margin-top: 0.4rem;
+    margin-top: 0.25rem;
     display: none;
     flex-direction: column;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
+    z-index: 1010;
 }
 
 .search-result-item {
@@ -898,10 +908,12 @@ button {
 .form-row {
     display: flex;
     gap: 1rem;
+    width: 100%;
 }
 
 .form-row .form-group {
     flex: 1;
+    min-width: 0;
 }
 
 .form-row .flex-2 { flex: 2; }
@@ -922,6 +934,8 @@ input[type="url"],
 input[type="number"],
 select,
 textarea {
+    width: 100%;
+    box-sizing: border-box;
     background: white;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
@@ -1424,6 +1438,10 @@ textarea:focus {
     
     .map-helper {
         display: none;
+    }
+
+    .places-list {
+        padding-bottom: 120px !important;
     }
 }
 
