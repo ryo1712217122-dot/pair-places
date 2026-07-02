@@ -1381,9 +1381,9 @@ textarea:focus {
     
     /* Sidebar becomes a Native-like Bottom Sheet overlaying the map */
     .sidebar-section {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        display: block !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
         position: absolute;
         bottom: 0;
         left: 0;
@@ -1398,9 +1398,6 @@ textarea:focus {
         transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         background: rgba(255, 255, 255, 0.95);
         box-shadow: 0 -8px 32px rgba(28, 26, 36, 0.12);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
     }
     
     /* Collapsed state - pushes sheet down so only the handle is visible */
@@ -1466,22 +1463,22 @@ textarea:focus {
     }
 
     .sidebar-body {
-        display: block;
-        overflow-y: auto !important;
-        flex: 1;
-        min-height: 0;
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
         padding: 1rem;
         box-sizing: border-box;
     }
 
     .places-list-section {
-        display: block;
+        display: block !important;
         height: auto !important;
+        overflow: visible !important;
     }
 
     .places-list-container {
-        display: block;
-        overflow-y: visible !important;
+        display: block !important;
+        overflow: visible !important;
         height: auto !important;
     }
 }
