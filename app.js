@@ -116,18 +116,50 @@ function setupEventListeners() {
         document.getElementById("place-lng").value = center.lng.toFixed(6);
     });
 
-    // Location Search in Modal
+    // Location Search in Modal (Real-time Autocomplete Suggest)
     const searchBtn = document.getElementById("location-search-btn");
     const searchInput = document.getElementById("location-search-input");
+    let searchTimeout = null;
     if (searchBtn && searchInput) {
         searchBtn.addEventListener("click", handleLocationSearch);
+        searchInput.addEventListener("input", () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(handleLocationSearch, 300);
+        });
         searchInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
+                clearTimeout(searchTimeout);
                 handleLocationSearch();
             }
         });
     }
+
+    // Modal Type Selector Tabs
+    const modalTypeTabs = document.querySelectorAll("#modal-type-tabs .status-tab");
+    const placeTypeInput = document.getElementById("place-type");
+    modalTypeTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            modalTypeTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            if (placeTypeInput) {
+                placeTypeInput.value = tab.getAttribute("data-type-val");
+            }
+        });
+    });
+
+    // Modal Status Selector Tabs
+    const modalStatusTabs = document.querySelectorAll("#modal-status-tabs .status-tab");
+    const placeStatusInput = document.getElementById("place-status");
+    modalStatusTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            modalStatusTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            if (placeStatusInput) {
+                placeStatusInput.value = tab.getAttribute("data-status-val");
+            }
+        });
+    });
 
     const categoryChips = document.querySelectorAll(".filter-chip");
     categoryChips.forEach(chip => {
@@ -350,7 +382,7 @@ function renderPlacesList() {
             </div>
         `;
 
-        card.addEventListener("click", () => selectPlace(place.id));
+        card.addEventListener("click", () => selectPlace(place.id, false));
         placesList.appendChild(card);
     });
 
@@ -476,8 +508,15 @@ function openAddPlaceModal(lat = null, lng = null) {
     document.getElementById("place-lat").value = lat !== null ? lat.toFixed(6) : center.lat.toFixed(6);
     document.getElementById("place-lng").value = lng !== null ? lng.toFixed(6) : center.lng.toFixed(6);
     
-    document.querySelector('input[name="place-type"][value="place"]').checked = true;
-    document.querySelector('input[name="place-status"][value="want_to_go"]').checked = true;
+    // Set hidden inputs and toggle active classes on tabs
+    document.getElementById("place-type").value = "place";
+    document.getElementById("place-status").value = "want_to_go";
+    document.querySelectorAll("#modal-type-tabs .status-tab").forEach(t => {
+        t.classList.toggle("active", t.getAttribute("data-type-val") === "place");
+    });
+    document.querySelectorAll("#modal-status-tabs .status-tab").forEach(t => {
+        t.classList.toggle("active", t.getAttribute("data-status-val") === "want_to_go");
+    });
     
     document.getElementById("modal-title").textContent = "新しい場所を追加";
     document.getElementById("save-place-btn").textContent = "保存する";
@@ -619,8 +658,14 @@ function openEditPlaceModal(place) {
     }
     
     const placeType = place.type || "place";
-    document.querySelector(`input[name="place-type"][value="${placeType}"]`).checked = true;
-    document.querySelector(`input[name="place-status"][value="${place.status}"]`).checked = true;
+    document.getElementById("place-type").value = placeType;
+    document.getElementById("place-status").value = place.status;
+    document.querySelectorAll("#modal-type-tabs .status-tab").forEach(t => {
+        t.classList.toggle("active", t.getAttribute("data-type-val") === placeType);
+    });
+    document.querySelectorAll("#modal-status-tabs .status-tab").forEach(t => {
+        t.classList.toggle("active", t.getAttribute("data-status-val") === place.status);
+    });
     
     document.getElementById("modal-title").textContent = "スポット情報を編集";
     document.getElementById("save-place-btn").textContent = "変更を保存";
@@ -676,8 +721,8 @@ async function handlePlaceFormSubmit(e) {
     const imageUrl = document.getElementById("place-image-url").value;
     const latitude = parseFloat(document.getElementById("place-lat").value);
     const longitude = parseFloat(document.getElementById("place-lng").value);
-    const status = document.querySelector('input[name="place-status"]:checked').value;
-    const type = document.querySelector('input[name="place-type"]:checked').value;
+    const status = document.getElementById("place-status").value;
+    const type = document.getElementById("place-type").value;
 
     const payload = {
         title,
@@ -730,7 +775,7 @@ async function handlePlaceFormSubmit(e) {
             await fetchData();
             
             if (!placeId && resData.place) {
-                selectPlace(resData.place.id);
+                selectPlace(resData.place.id, false);
             } else if (placeId) {
                 openDetailModal(placeId);
             }
@@ -759,7 +804,7 @@ async function handlePlaceFormSubmit(e) {
                 if (placeId) {
                     openDetailModal(placeId);
                 } else {
-                    selectPlace(selectedPlaceId);
+                    selectPlace(selectedPlaceId, false);
                 }
             }
         }
@@ -949,7 +994,7 @@ document.getElementById("start-roulette-btn").addEventListener("click", () => {
 
             setTimeout(() => {
                 closeModal(rouletteModal);
-                selectPlace(winner.id);
+                selectPlace(winner.id, false);
             }, 1800);
         }
     };
@@ -975,7 +1020,13 @@ async function handleLocationSearch() {
     const query = document.getElementById("location-search-input").value.trim();
     const resultsList = document.getElementById("search-results-list");
     
-    if (!query) return;
+    if (!query) {
+        if (resultsList) {
+            resultsList.innerHTML = "";
+            resultsList.style.display = "none";
+        }
+        return;
+    }
 
     resultsList.innerHTML = `<div style="padding: 0.65rem 0.85rem; font-size: 0.8rem; color: var(--text-muted);">検索中...</div>`;
     resultsList.style.display = "flex";

@@ -117,7 +117,7 @@
                 </div>
                 <!-- Tiny Footer for Version -->
                 <div class="sidebar-footer">
-                    <span class="app-version">v1.2.2</span>
+                    <span class="app-version">v1.2.3</span>
                 </div>
             </section>
 
@@ -210,29 +210,19 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>タイプ</label>
-                        <div class="type-selector">
-                            <label class="radio-label">
-                                <input type="radio" name="place-type" value="place" checked>
-                                <span class="status-badge type-place">行きたい場所</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="place-type" value="todo">
-                                <span class="status-badge type-todo">やりたいこと</span>
-                            </label>
+                        <div class="status-filters" id="modal-type-tabs">
+                            <button type="button" class="status-tab active" data-type-val="place">行きたい場所</button>
+                            <button type="button" class="status-tab" data-type-val="todo">やりたいこと</button>
                         </div>
+                        <input type="hidden" id="place-type" value="place">
                     </div>
                     <div class="form-group">
                         <label>ステータス</label>
-                        <div class="status-selector">
-                            <label class="radio-label">
-                                <input type="radio" name="place-status" value="want_to_go" checked>
-                                <span class="status-badge want_to_go">行きたい</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="place-status" value="visited">
-                                <span class="status-badge visited">行った！</span>
-                            </label>
+                        <div class="status-filters" id="modal-status-tabs">
+                            <button type="button" class="status-tab active" data-status-val="want_to_go">行きたい</button>
+                            <button type="button" class="status-tab" data-status-val="visited">行った！</button>
                         </div>
+                        <input type="hidden" id="place-status" value="want_to_go">
                     </div>
                 </div>
 
