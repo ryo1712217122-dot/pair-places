@@ -104,6 +104,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 "longitude": float(req_data.get("longitude", 139.6917)),
                 "proposedBy": req_data.get("proposedBy", "user1"),
                 "status": req_data.get("status", "want_to_go"),
+                "type": req_data.get("type", "place"),
                 "comments": [],
                 "createdAt": req_data.get("createdAt", "")
             }
@@ -183,6 +184,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     if "latitude" in req_data: place["latitude"] = float(req_data["latitude"])
                     if "longitude" in req_data: place["longitude"] = float(req_data["longitude"])
                     if "status" in req_data: place["status"] = req_data["status"]
+                    if "type" in req_data: place["type"] = req_data["type"]
                     found = True
                     break
             if found:

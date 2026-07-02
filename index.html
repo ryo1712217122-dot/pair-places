@@ -84,6 +84,15 @@
                     </div>
                     
                     <div class="filter-group">
+                        <label>タイプ</label>
+                        <div class="type-filters">
+                            <button class="type-tab active" data-filter-type="all">すべて</button>
+                            <button class="type-tab" data-filter-type="place">行きたい場所</button>
+                            <button class="type-tab" data-filter-type="todo">やりたいこと</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
                         <label>ステータス</label>
                         <div class="status-filters">
                             <button class="status-tab active" data-filter-status="all">すべて</button>
@@ -108,7 +117,7 @@
                 </div>
                 <!-- Tiny Footer for Version -->
                 <div class="sidebar-footer">
-                    <span class="app-version">v1.2.1</span>
+                    <span class="app-version">v1.2.2</span>
                 </div>
             </section>
 
@@ -198,17 +207,32 @@
                     </button>
                 </div>
 
-                <div class="form-group">
-                    <label>ステータス</label>
-                    <div class="status-selector">
-                        <label class="radio-label">
-                            <input type="radio" name="place-status" value="want_to_go" checked>
-                            <span class="status-badge want_to_go">行きたい</span>
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="place-status" value="visited">
-                            <span class="status-badge visited">行った！</span>
-                        </label>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>タイプ</label>
+                        <div class="type-selector">
+                            <label class="radio-label">
+                                <input type="radio" name="place-type" value="place" checked>
+                                <span class="status-badge type-place">行きたい場所</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="place-type" value="todo">
+                                <span class="status-badge type-todo">やりたいこと</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>ステータス</label>
+                        <div class="status-selector">
+                            <label class="radio-label">
+                                <input type="radio" name="place-status" value="want_to_go" checked>
+                                <span class="status-badge want_to_go">行きたい</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="place-status" value="visited">
+                                <span class="status-badge visited">行った！</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -231,6 +255,7 @@
             <div class="modal-body detail-body">
                 <div class="detail-main-info">
                     <div class="detail-meta">
+                        <span class="status-badge" id="detail-type-badge">タイプ</span>
                         <span class="category-badge" id="detail-category-badge">カテゴリ</span>
                         <span class="status-badge" id="detail-status-badge">ステータス</span>
                     </div>

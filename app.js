@@ -12,6 +12,7 @@ let selectedPlaceId = null;
 
 // Filters State
 let currentCategoryFilter = "all";
+let currentTypeFilter = "all";
 let currentStatusFilter = "all";
 
 // DOM Elements
@@ -134,6 +135,16 @@ function setupEventListeners() {
             categoryChips.forEach(c => c.classList.remove("active"));
             chip.classList.add("active");
             currentCategoryFilter = chip.getAttribute("data-filter-category");
+            renderUI();
+        });
+    });
+
+    const typeTabs = document.querySelectorAll(".type-tab");
+    typeTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            typeTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            currentTypeFilter = tab.getAttribute("data-filter-type");
             renderUI();
         });
     });
@@ -279,8 +290,9 @@ function renderUI() {
 function getFilteredPlaces() {
     return places.filter(place => {
         const catMatch = currentCategoryFilter === "all" || place.category === currentCategoryFilter;
+        const typeMatch = currentTypeFilter === "all" || (place.type || "place") === currentTypeFilter;
         const statusMatch = currentStatusFilter === "all" || place.status === currentStatusFilter;
-        return catMatch && statusMatch;
+        return catMatch && typeMatch && statusMatch;
     });
 }
 
@@ -320,14 +332,17 @@ function renderPlacesList() {
             other: { label: "その他", class: "other" }
         };
         const catInfo = catMap[place.category] || catMap.other;
-        const statusLabel = place.status === "want_to_go" ? "行きたい" : "行った！";
-        const statusClass = place.status;
+        const typeLabel = place.type === "todo" ? "やりたいこと" : "行きたい場所";
+        const typeClass = place.type === "todo" ? "todo" : "place";
 
         card.innerHTML = `
             <div class="card-image" style="background-image: url('${place.imageUrl}')"></div>
             <div class="card-info">
                 <div class="card-category-bar">
-                    <span class="cat-tag ${catInfo.class}">${catInfo.label}</span>
+                    <div>
+                        <span class="type-tag-inline ${typeClass}">${typeLabel}</span>
+                        <span class="cat-tag ${catInfo.class}">${catInfo.label}</span>
+                    </div>
                     <span class="card-badge ${statusClass}">${statusLabel}</span>
                 </div>
                 <h3 class="card-title">${place.title}</h3>
@@ -461,6 +476,7 @@ function openAddPlaceModal(lat = null, lng = null) {
     document.getElementById("place-lat").value = lat !== null ? lat.toFixed(6) : center.lat.toFixed(6);
     document.getElementById("place-lng").value = lng !== null ? lng.toFixed(6) : center.lng.toFixed(6);
     
+    document.querySelector('input[name="place-type"][value="place"]').checked = true;
     document.querySelector('input[name="place-status"][value="want_to_go"]').checked = true;
     
     document.getElementById("modal-title").textContent = "新しい場所を追加";
@@ -494,6 +510,13 @@ function openDetailModal(placeId) {
     const catBadge = document.getElementById("detail-category-badge");
     catBadge.className = `category-badge ${catInfo.class}`;
     catBadge.textContent = catInfo.label;
+
+    const typeBadge = document.getElementById("detail-type-badge");
+    if (typeBadge) {
+        const placeType = place.type || "place";
+        typeBadge.className = `status-badge ${placeType === "todo" ? "type-todo" : "type-place"}`;
+        typeBadge.textContent = placeType === "todo" ? "やりたいこと" : "行きたい場所";
+    }
 
     const statusBadge = document.getElementById("detail-status-badge");
     statusBadge.className = `status-badge ${statusClass}`;
@@ -595,6 +618,8 @@ function openEditPlaceModal(place) {
         resultsList.style.display = "none";
     }
     
+    const placeType = place.type || "place";
+    document.querySelector(`input[name="place-type"][value="${placeType}"]`).checked = true;
     document.querySelector(`input[name="place-status"][value="${place.status}"]`).checked = true;
     
     document.getElementById("modal-title").textContent = "スポット情報を編集";
@@ -652,6 +677,7 @@ async function handlePlaceFormSubmit(e) {
     const latitude = parseFloat(document.getElementById("place-lat").value);
     const longitude = parseFloat(document.getElementById("place-lng").value);
     const status = document.querySelector('input[name="place-status"]:checked').value;
+    const type = document.querySelector('input[name="place-type"]:checked').value;
 
     const payload = {
         title,
@@ -662,6 +688,7 @@ async function handlePlaceFormSubmit(e) {
         latitude,
         longitude,
         status,
+        type,
         proposedBy: placeId ? undefined : currentUser,
         createdAt: placeId ? undefined : new Date().toISOString()
     };
