@@ -38,10 +38,29 @@ const commentForm = document.getElementById("comment-form");
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 let GAS_URL = "https://script.google.com/macros/s/AKfycbzT16zPcMljjlXR4mbjzecyPpxRbAmvCV3VODr90V64aDRhhlhwFAcXH1O9HAtIumUS/exec";
 
-// Load GAS URL from localStorage if saved by user in the Settings UI
-const savedGasUrl = localStorage.getItem("pairmap_gas_url");
-if (savedGasUrl) {
-    GAS_URL = savedGasUrl;
+// URLパラメータから ?gas=... または ?gas_url=... を取得して自動保存・同期する
+const urlParams = new URLSearchParams(window.location.search);
+const gasFromUrl = urlParams.get("gas") || urlParams.get("gas_url");
+if (gasFromUrl) {
+    const cleanGasUrl = decodeURIComponent(gasFromUrl).trim();
+    if (cleanGasUrl.startsWith("https://script.google.com/")) {
+        localStorage.setItem("pairmap_gas_url", cleanGasUrl);
+        GAS_URL = cleanGasUrl;
+        
+        // アドレスバーからURLパラメータを綺麗に消去（リロード時に再読み込みさせないため）
+        try {
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+        } catch (e) {
+            console.error("Failed to clean address bar URL", e);
+        }
+    }
+} else {
+    // URLに指定がない場合は、これまで通りlocalStorageに保存されているURLを読み込む
+    const savedGasUrl = localStorage.getItem("pairmap_gas_url");
+    if (savedGasUrl) {
+        GAS_URL = savedGasUrl;
+    }
 }
 
 // Initialize App
