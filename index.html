@@ -117,7 +117,7 @@
                 </div>
                 <!-- Tiny Footer for Version -->
                 <div class="sidebar-footer">
-                    <span class="app-version">v1.3.2</span>
+                    <span class="app-version">v1.3.3</span>
                 </div>
             </section>
 
@@ -146,62 +146,7 @@
             <form id="place-form" class="modal-body">
                 <input type="hidden" id="place-id">
                 
-                <!-- Location Search Bar -->
-                <div class="form-group search-coords-group">
-                    <label for="location-search-input">住所やスポット名で位置検索</label>
-                    <div class="search-input-wrapper">
-                        <input type="text" id="location-search-input" placeholder="例: 東京タワー、鎌倉駅、住所など...">
-                        <button type="button" class="primary-btn" id="location-search-btn">
-                            <i data-lucide="search"></i>検索
-                        </button>
-                    </div>
-                    <div class="search-results-list" id="search-results-list"></div>
-                </div>
-                <hr class="form-divider">
-                
-                <div class="form-row">
-                    <div class="form-group flex-2">
-                        <label for="place-title">スポット名 <span class="required">*</span></label>
-                        <input type="text" id="place-title" placeholder="例: 絶品フレンチトーストカフェ" required>
-                    </div>
-                    <div class="form-group flex-1">
-                        <label for="place-category">カテゴリ</label>
-                        <select id="place-category">
-                            <option value="food">グルメ</option>
-                            <option value="scenic">絶景・観光</option>
-                            <option value="activity">遊ぶ・体験</option>
-                            <option value="shopping">お買い物</option>
-                            <option value="lodging">宿泊</option>
-                            <option value="other" selected>その他</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="place-description">メモ・紹介文</label>
-                    <textarea id="place-description" rows="3" placeholder="ここで行きたいこと、食べたいもの、目的など…"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="place-url">参考URL</label>
-                    <input type="url" id="place-url" placeholder="https://instagram.com/...">
-                    <input type="hidden" id="place-image-url">
-                </div>
-
-                <div class="form-row geo-coords">
-                    <div class="form-group">
-                        <label for="place-lat">緯度 (Latitude)</label>
-                        <input type="number" id="place-lat" step="any" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="place-lng">経度 (Longitude)</label>
-                        <input type="number" id="place-lng" step="any" required>
-                    </div>
-                    <button type="button" class="icon-btn select-map-coord" id="get-center-coord" title="地図の中心座標を入力">
-                        <i data-lucide="crosshair"></i>
-                    </button>
-                </div>
-
+                <!-- タイプ（一番上に配置） -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>タイプ</label>
@@ -219,6 +164,66 @@
                         </div>
                         <input type="hidden" id="place-status" value="want_to_go">
                     </div>
+                </div>
+
+                <!-- スポット名（次に配置） -->
+                <div class="form-group">
+                    <label for="place-title">スポット名 <span class="required">*</span></label>
+                    <input type="text" id="place-title" placeholder="例: 絶品フレンチトーストカフェ" required>
+                </div>
+
+                <!-- カテゴリ（次に配置） -->
+                <div class="form-group">
+                    <label for="place-category">カテゴリ</label>
+                    <select id="place-category">
+                        <option value="food">グルメ</option>
+                        <option value="scenic">絶景・観光</option>
+                        <option value="activity">遊ぶ・体験</option>
+                        <option value="shopping">お買い物</option>
+                        <option value="lodging">宿泊</option>
+                        <option value="other" selected>その他</option>
+                    </select>
+                </div>
+
+                <!-- 住所登録・位置検索（次に配置） -->
+                <div class="form-group search-coords-group">
+                    <label for="location-search-input">住所やスポット名で位置検索 (住所登録)</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" id="location-search-input" placeholder="例: 東京タワー、鎌倉駅、住所など...">
+                        <button type="button" class="primary-btn" id="location-search-btn">
+                            <i data-lucide="search"></i>検索
+                        </button>
+                    </div>
+                    <div class="search-results-list" id="search-results-list"></div>
+                </div>
+                <hr class="form-divider">
+
+                <!-- メモ（そのまま） -->
+                <div class="form-group">
+                    <label for="place-description">メモ・紹介文</label>
+                    <textarea id="place-description" rows="3" placeholder="ここで行きたいこと、食べたいもの、目的など…"></textarea>
+                </div>
+
+                <!-- 参考URL（そのまま） -->
+                <div class="form-group">
+                    <label for="place-url">参考URL</label>
+                    <input type="url" id="place-url" placeholder="https://instagram.com/...">
+                    <input type="hidden" id="place-image-url">
+                </div>
+
+                <!-- 緯度・経度（内部で処理し非表示に設定） -->
+                <div class="form-row geo-coords" style="display: none;">
+                    <div class="form-group">
+                        <label for="place-lat">緯度 (Latitude)</label>
+                        <input type="number" id="place-lat" step="any" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="place-lng">経度 (Longitude)</label>
+                        <input type="number" id="place-lng" step="any" required>
+                    </div>
+                    <button type="button" class="icon-btn select-map-coord" id="get-center-coord" title="地図の中心座標を入力">
+                        <i data-lucide="crosshair"></i>
+                    </button>
                 </div>
 
                 <div class="modal-footer">
