@@ -1249,3 +1249,22 @@ function toggleModalLocationFields(type) {
         document.getElementById("place-lng").required = true;
     }
 }
+
+// ピンチズーム（マルチタッチ）の無効化（地図上でのピンチズームは許可）
+document.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1) {
+        if (e.target.closest('#map')) return;
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// ダブルタップズームの無効化（地図上でのダブルタップは許可）
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+    const now = new Date().getTime();
+    if (now - lastTouchEnd <= 300) {
+        if (e.target.closest('#map')) return;
+        e.preventDefault();
+    }
+    lastTouchEnd = now;
+}, { passive: false });
