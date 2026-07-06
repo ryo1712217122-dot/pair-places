@@ -138,19 +138,58 @@ function setupEventListeners() {
     // Location Search in Modal (Real-time Autocomplete Suggest)
     const searchBtn = document.getElementById("location-search-btn");
     const searchInput = document.getElementById("location-search-input");
+    const searchResultsList = document.getElementById("search-results-list");
     let searchTimeout = null;
     if (searchBtn && searchInput) {
-        searchBtn.addEventListener("click", handleLocationSearch);
+        searchBtn.addEventListener("click", () => {
+            clearTimeout(searchTimeout);
+            handleLocationSearch();
+        });
         searchInput.addEventListener("input", () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(handleLocationSearch, 300);
         });
         searchInput.addEventListener("keydown", (e) => {
+            const items = searchResultsList ? Array.from(searchResultsList.children).filter(el => el.classList.contains("search-result-item")) : [];
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                if (items.length === 0) return;
+                e.preventDefault();
+                let index = items.findIndex(el => el.classList.contains("active"));
+                items.forEach(el => el.classList.remove("active"));
+                index = e.key === "ArrowDown" ? (index + 1) % items.length : (index - 1 + items.length) % items.length;
+                items[index].classList.add("active");
+                items[index].scrollIntoView({ block: "nearest" });
+                return;
+            }
+
             if (e.key === "Enter") {
                 e.preventDefault();
-                clearTimeout(searchTimeout);
-                handleLocationSearch();
+                const activeItem = items.find(el => el.classList.contains("active"));
+                if (activeItem) {
+                    activeItem.click();
+                } else {
+                    clearTimeout(searchTimeout);
+                    handleLocationSearch();
+                }
+                return;
             }
+
+            if (e.key === "Escape") {
+                if (searchResultsList) {
+                    searchResultsList.innerHTML = "";
+                    searchResultsList.style.display = "none";
+                }
+            }
+        });
+
+        // 候補リスト・検索欄・検索ボタン以外をクリックしたら閉じる
+        document.addEventListener("click", (e) => {
+            if (!searchResultsList) return;
+            const wrapper = searchInput.closest(".search-input-wrapper");
+            if ((wrapper && wrapper.contains(e.target)) || searchResultsList.contains(e.target)) return;
+            searchResultsList.innerHTML = "";
+            searchResultsList.style.display = "none";
         });
     }
 
@@ -1135,11 +1174,20 @@ function escapeHTML(str) {
 }
 
 // Location Search using Nominatim OpenStreetMap API
+let searchAbortController = null;
+
 async function handleLocationSearch() {
     const query = document.getElementById("location-search-input").value.trim();
     const resultsList = document.getElementById("search-results-list");
-    
-    if (!query) {
+
+    // 前回のリクエストが残っていたら中断し、古い結果が後から上書きされるのを防ぐ
+    if (searchAbortController) {
+        searchAbortController.abort();
+        searchAbortController = null;
+    }
+
+    // 短すぎるクエリはノイズの多い結果しか返らないためスキップ
+    if (query.length < 2) {
         if (resultsList) {
             resultsList.innerHTML = "";
             resultsList.style.display = "none";
@@ -1150,11 +1198,22 @@ async function handleLocationSearch() {
     resultsList.innerHTML = `<div style="padding: 0.65rem 0.85rem; font-size: 0.8rem; color: var(--text-muted);">検索中...</div>`;
     resultsList.style.display = "flex";
 
+    const controller = new AbortController();
+    searchAbortController = controller;
+
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=35&countrycodes=jp&addressdetails=1`, {
+        // 現在の地図の表示範囲を優先領域として渡し、近くのスポットを上位表示させる
+        let viewboxParam = "";
+        if (map) {
+            const b = map.getBounds();
+            viewboxParam = `&viewbox=${b.getWest()},${b.getNorth()},${b.getEast()},${b.getSouth()}&bounded=0`;
+        }
+
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=35&countrycodes=jp&addressdetails=1&dedupe=1${viewboxParam}`, {
             headers: {
                 'Accept-Language': 'ja,en;q=0.9'
-            }
+            },
+            signal: controller.signal
         });
         if (!response.ok) throw new Error("検索エラー");
         const results = await response.json();
@@ -1183,7 +1242,17 @@ async function handleLocationSearch() {
                 }
                 return 5;
             };
-            return getPoiScore(b) - getPoiScore(a);
+            const scoreDiff = getPoiScore(b) - getPoiScore(a);
+            if (scoreDiff !== 0) return scoreDiff;
+
+            // 同じ優先度同士は、現在の地図の中心に近い候補を上位にする
+            if (map) {
+                const center = map.getCenter();
+                const distA = Math.hypot(a.lat - center.lat, a.lon - center.lng);
+                const distB = Math.hypot(b.lat - center.lat, b.lon - center.lng);
+                return distA - distB;
+            }
+            return 0;
         });
 
         // 上位10件に絞り込む
@@ -1222,6 +1291,7 @@ async function handleLocationSearch() {
             resultsList.appendChild(div);
         });
     } catch (error) {
+        if (error.name === "AbortError") return;
         console.error("Search error:", error);
         resultsList.innerHTML = `<div style="padding: 0.65rem 0.85rem; font-size: 0.8rem; color: var(--danger);">検索中にエラーが発生しました。</div>`;
     }

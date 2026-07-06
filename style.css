@@ -899,7 +899,8 @@ button {
     border-bottom: none;
 }
 
-.search-result-item:hover {
+.search-result-item:hover,
+.search-result-item.active {
     background: rgba(0, 0, 0, 0.04);
 }
 
