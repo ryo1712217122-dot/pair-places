@@ -63,12 +63,69 @@ if (gasFromUrl) {
     }
 }
 
+// Color Theme Palettes (multiple color variations for the accent/category palette)
+const THEME_PALETTES = {
+    sunset: {
+        colors: {
+            "--color-orange-red": "#FF420E",
+            "--color-coral": "#F98866",
+            "--color-sage": "#80BD9E",
+            "--color-lime": "#89DA59"
+        }
+    },
+    ocean: {
+        colors: {
+            "--color-orange-red": "#0077B6",
+            "--color-coral": "#00B4D8",
+            "--color-sage": "#2A9D8F",
+            "--color-lime": "#52D8C4"
+        }
+    },
+    berry: {
+        colors: {
+            "--color-orange-red": "#C9184A",
+            "--color-coral": "#FF6F91",
+            "--color-sage": "#9D4EDD",
+            "--color-lime": "#F15BB5"
+        }
+    },
+    forest: {
+        colors: {
+            "--color-orange-red": "#2D6A4F",
+            "--color-coral": "#74C69D",
+            "--color-sage": "#588157",
+            "--color-lime": "#A7C957"
+        }
+    }
+};
+
+function applyThemePalette(themeId) {
+    const palette = THEME_PALETTES[themeId] || THEME_PALETTES.sunset;
+    for (const [prop, val] of Object.entries(palette.colors)) {
+        document.documentElement.style.setProperty(prop, val);
+    }
+    document.querySelectorAll(".theme-select-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.themeId === themeId);
+    });
+}
+
+function setThemePalette(themeId) {
+    localStorage.setItem("pairmap_theme_id", themeId);
+    applyThemePalette(themeId);
+}
+
+function initTheme() {
+    const savedThemeId = localStorage.getItem("pairmap_theme_id") || "sunset";
+    applyThemePalette(savedThemeId);
+}
+
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     initMap();
     setupEventListeners();
     fetchData();
-    
+
     // Auto polling every 10 seconds to keep data in sync
     setInterval(fetchData, 10000);
 });
@@ -106,6 +163,10 @@ function setupEventListeners() {
             user2Label.classList.remove("active");
         }
         renderPlacesList();
+    });
+
+    document.querySelectorAll(".theme-select-btn").forEach(btn => {
+        btn.addEventListener("click", () => setThemePalette(btn.dataset.themeId));
     });
 
     document.getElementById("add-place-btn").addEventListener("click", () => openAddPlaceModal());
@@ -392,22 +453,24 @@ function setupEventListeners() {
 }
 
 // Save data helper for Cloud Sync Mode (Google Apps Script)
+// Throws on any failure so callers don't proceed (e.g. closing a modal) as if the save succeeded.
 async function saveCloudData(data) {
-    try {
-        if (!GAS_URL || GAS_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
-            alert("Google Apps Script WebアプリのURLが設定されていません。右上の設定（歯車）から設定してください。");
-            return;
-        }
-        const response = await fetch(GAS_URL, {
-            method: "POST",
-            // We omit Content-Type: application/json to prevent browser sending OPTIONS preflight request,
-            // since GAS Web Apps do not handle preflight CORS requests properly.
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error("クラウドへの保存に失敗しました");
-    } catch (error) {
-        console.error("Cloud Save Error:", error);
-        alert("データの保存に失敗しました。URLが正しいか、GASデプロイ設定が「全員（Anyone）」になっているか確認してください。");
+    if (!GAS_URL || GAS_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+        throw new Error("Google Apps Script WebアプリのURLが設定されていません。右上の設定（歯車）から設定してください。");
+    }
+    const response = await fetch(GAS_URL, {
+        method: "POST",
+        // We omit Content-Type: application/json to prevent browser sending OPTIONS preflight request,
+        // since GAS Web Apps do not handle preflight CORS requests properly.
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error("クラウドへの保存に失敗しました (HTTP " + response.status + ")");
+
+    // GAS returns HTTP 200 with { success: false, error } even when doPost fails internally
+    // (e.g. PropertiesService quota exceeded), so the success field must be checked explicitly.
+    const result = await response.json();
+    if (!result.success) {
+        throw new Error(result.error || "クラウドへの保存にサーバー側で失敗しました。相手には反映されていません。");
     }
 }
 
@@ -518,6 +581,11 @@ function renderPlacesList(filtered = getFilteredPlaces()) {
 
         const imageHTML = place.imageUrl ? `<div class="card-image" style="background-image: url('${place.imageUrl}')"></div>` : '';
 
+        const commentCount = (place.comments || []).length;
+        const commentBadgeHTML = commentCount > 0
+            ? `<div class="card-comment-badge"><i data-lucide="message-circle"></i><span>コメント${commentCount}件</span></div>`
+            : '';
+
         card.innerHTML = `
             ${imageHTML}
             <div class="card-info">
@@ -528,8 +596,11 @@ function renderPlacesList(filtered = getFilteredPlaces()) {
                     </div>
                     <span class="card-badge ${statusClass}">${statusLabel}</span>
                 </div>
-                <h3 class="card-title">${place.title}</h3>
-                <p class="card-desc">${place.description || "メモはありません。"}</p>
+                <div class="card-main-text">
+                    <h3 class="card-title">${place.title}</h3>
+                    <p class="card-desc">${place.description || "メモはありません。"}</p>
+                    ${commentBadgeHTML}
+                </div>
             </div>
         `;
 

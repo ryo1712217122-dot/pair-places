@@ -297,6 +297,28 @@
             </div>
             <form id="settings-form" class="modal-body">
                 <div class="form-group">
+                    <label>カラーテーマ</label>
+                    <div class="theme-select-grid" id="theme-select-grid">
+                        <button type="button" class="theme-select-btn" data-theme-id="sunset">
+                            <span class="theme-swatch" style="background: linear-gradient(135deg, #FF420E, #89DA59);"></span>
+                            <span class="theme-select-name">🌅 サンセット</span>
+                        </button>
+                        <button type="button" class="theme-select-btn" data-theme-id="ocean">
+                            <span class="theme-swatch" style="background: linear-gradient(135deg, #0077B6, #52D8C4);"></span>
+                            <span class="theme-select-name">🌊 オーシャン</span>
+                        </button>
+                        <button type="button" class="theme-select-btn" data-theme-id="berry">
+                            <span class="theme-swatch" style="background: linear-gradient(135deg, #C9184A, #F15BB5);"></span>
+                            <span class="theme-select-name">🍓 ベリー</span>
+                        </button>
+                        <button type="button" class="theme-select-btn" data-theme-id="forest">
+                            <span class="theme-swatch" style="background: linear-gradient(135deg, #2D6A4F, #A7C957);"></span>
+                            <span class="theme-select-name">🌲 フォレスト</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label for="settings-app-title">アプリのタイトル</label>
                     <input type="text" id="settings-app-title" value="ふたりの行きたい場所マップ" required>
                 </div>

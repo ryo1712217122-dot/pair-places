@@ -11,7 +11,7 @@
     --bg-surface: rgba(255, 255, 255, 0.82);
     --bg-surface-elevated: rgba(255, 255, 255, 0.96);
     --border-color: rgba(28, 26, 36, 0.08);
-    --border-focus: rgba(255, 66, 14, 0.3);
+    --border-focus: color-mix(in srgb, var(--color-orange-red) 30%, transparent);
     
     --text-primary: #2b2738;
     --text-secondary: #5f5a70;
@@ -58,9 +58,9 @@
 body {
     background-color: var(--bg-base);
     background-image: 
-        radial-gradient(at 10% 10%, rgba(249, 136, 102, 0.08) 0px, transparent 50%),
-        radial-gradient(at 90% 90%, rgba(128, 189, 158, 0.08) 0px, transparent 50%),
-        radial-gradient(at 50% 10%, rgba(137, 218, 89, 0.06) 0px, transparent 40%);
+        radial-gradient(at 10% 10%, color-mix(in srgb, var(--color-coral) 8%, transparent) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, color-mix(in srgb, var(--color-sage) 8%, transparent) 0px, transparent 50%),
+        radial-gradient(at 50% 10%, color-mix(in srgb, var(--color-lime) 6%, transparent) 0px, transparent 40%);
     background-attachment: fixed;
     color: var(--text-primary);
     font-family: var(--font-body);
@@ -109,13 +109,15 @@ body {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .logo-icon {
     color: var(--accent-solid);
     width: 28px;
     height: 28px;
-    filter: drop-shadow(0 0 6px rgba(255, 66, 14, 0.2));
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-orange-red) 20%, transparent));
 }
 
 .header-logo h1 {
@@ -190,7 +192,7 @@ body {
 .app-main {
     display: flex;
     flex: 1;
-    height: calc(100dvh - (70px + env(safe-area-inset-top, 0px)));
+    min-height: 0;
     overflow: hidden;
     position: relative;
 }
@@ -284,7 +286,7 @@ body {
     background: var(--accent-gradient);
     border-color: transparent;
     color: white;
-    box-shadow: 0 4px 12px rgba(255, 66, 14, 0.25);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-orange-red) 25%, transparent);
     font-weight: 500;
 }
 
@@ -408,9 +410,9 @@ body {
 }
 
 .place-card.selected {
-    background: rgba(255, 66, 14, 0.04);
+    background: color-mix(in srgb, var(--color-orange-red) 4%, transparent);
     border-color: var(--accent-solid);
-    box-shadow: 0 4px 16px rgba(255, 66, 14, 0.08);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-orange-red) 8%, transparent);
 }
 
 .card-image {
@@ -446,6 +448,11 @@ body {
     text-overflow: ellipsis;
 }
 
+.card-main-text {
+    display: flex;
+    flex-direction: column;
+}
+
 .card-desc {
     font-size: 0.75rem;
     color: var(--text-secondary);
@@ -454,6 +461,27 @@ body {
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.4;
+}
+
+/* Highlights when a spot has comments/consultation from a partner */
+.card-comment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    align-self: flex-start;
+    margin-top: 0.4rem;
+    padding: 0.2rem 0.55rem;
+    background: color-mix(in srgb, var(--accent-solid) 12%, white);
+    color: var(--accent-solid);
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.card-comment-badge i {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.5;
 }
 
 .card-badge {
@@ -465,12 +493,12 @@ body {
 }
 
 .card-badge.want_to_go {
-    background: rgba(137, 218, 89, 0.15);
+    background: color-mix(in srgb, var(--color-lime) 15%, transparent);
     color: #559e24;
 }
 
 .card-badge.visited {
-    background: rgba(128, 189, 158, 0.15);
+    background: color-mix(in srgb, var(--color-sage) 15%, transparent);
     color: #4b8a6a;
 }
 
@@ -497,11 +525,11 @@ body {
     display: inline-block;
 }
 .type-tag-inline.place {
-    background: rgba(255, 66, 14, 0.08);
+    background: color-mix(in srgb, var(--color-orange-red) 8%, transparent);
     color: var(--color-orange-red);
 }
 .type-tag-inline.todo {
-    background: rgba(137, 218, 89, 0.12);
+    background: color-mix(in srgb, var(--color-lime) 12%, transparent);
     color: #559e24;
 }
 
@@ -666,7 +694,7 @@ body {
 
 .marker-pin.selected {
     transform: rotate(-45deg) scale(1.2);
-    box-shadow: 0 0 15px rgba(255, 66, 14, 0.5);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--color-orange-red) 50%, transparent);
     border: 1px solid white;
 }
 
@@ -693,13 +721,13 @@ button {
     border: none;
     color: white;
     padding: 0.65rem 1.2rem;
-    box-shadow: 0 4px 14px rgba(255, 66, 14, 0.2);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-orange-red) 20%, transparent);
 }
 
 .primary-btn:hover {
     opacity: 0.95;
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(255, 66, 14, 0.3);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-orange-red) 30%, transparent);
 }
 
 .primary-btn:active {
@@ -935,6 +963,49 @@ button {
 .form-row .flex-2 { flex: 2; }
 .form-row .flex-1 { flex: 1; }
 
+/* Color Theme Selector (Settings Modal) */
+.theme-select-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+}
+
+.theme-select-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.theme-select-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-select-btn.active {
+    border-color: var(--accent-solid);
+    background: color-mix(in srgb, var(--accent-solid) 8%, white);
+}
+
+.theme-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-round);
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.theme-select-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 label {
     font-size: 0.8rem;
     font-weight: 600;
@@ -1013,25 +1084,25 @@ textarea:focus {
 }
 
 .radio-label input:checked + .status-badge.want_to_go {
-    background: rgba(137, 218, 89, 0.15);
+    background: color-mix(in srgb, var(--color-lime) 15%, transparent);
     color: #559e24;
     border-color: var(--color-activity);
 }
 
 .radio-label input:checked + .status-badge.visited {
-    background: rgba(128, 189, 158, 0.15);
+    background: color-mix(in srgb, var(--color-sage) 15%, transparent);
     color: #4b8a6a;
     border-color: var(--color-scenic);
 }
 
 .radio-label input:checked + .status-badge.type-place {
-    background: rgba(255, 66, 14, 0.12);
+    background: color-mix(in srgb, var(--color-orange-red) 12%, transparent);
     color: var(--color-orange-red);
     border-color: var(--color-orange-red);
 }
 
 .radio-label input:checked + .status-badge.type-todo {
-    background: rgba(137, 218, 89, 0.15);
+    background: color-mix(in srgb, var(--color-lime) 15%, transparent);
     color: #559e24;
     border-color: var(--color-lime);
 }
@@ -1104,11 +1175,11 @@ textarea:focus {
     color: var(--text-secondary);
 }
 
-.category-badge.food { background: rgba(255, 66, 14, 0.12); color: var(--color-food); }
-.category-badge.scenic { background: rgba(128, 189, 158, 0.15); color: #4e8c6e; }
-.category-badge.activity { background: rgba(137, 218, 89, 0.15); color: #5a9e2d; }
+.category-badge.food { background: color-mix(in srgb, var(--color-orange-red) 12%, transparent); color: var(--color-food); }
+.category-badge.scenic { background: color-mix(in srgb, var(--color-sage) 15%, transparent); color: #4e8c6e; }
+.category-badge.activity { background: color-mix(in srgb, var(--color-lime) 15%, transparent); color: #5a9e2d; }
 .category-badge.shopping { background: rgba(252, 103, 103, 0.15); color: var(--color-shopping); }
-.category-badge.lodging { background: rgba(249, 136, 102, 0.15); color: #d66442; }
+.category-badge.lodging { background: color-mix(in srgb, var(--color-coral) 15%, transparent); color: #d66442; }
 .category-badge.other { background: rgba(112, 128, 144, 0.15); color: var(--color-other); }
 
 .detail-body h2 {
@@ -1297,14 +1368,14 @@ textarea:focus {
 .roulette-card-spin.active-spin {
     animation: rouletteCardFlip 0.15s infinite linear;
     border-color: var(--accent-solid);
-    box-shadow: 0 0 24px rgba(255, 66, 14, 0.15);
+    box-shadow: 0 0 24px color-mix(in srgb, var(--color-orange-red) 15%, transparent);
 }
 
 .roulette-card-spin.winner {
     animation: successPulse 0.5s 3 alternate ease-in-out;
-    background: rgba(255, 66, 14, 0.03);
+    background: color-mix(in srgb, var(--color-orange-red) 3%, transparent);
     border-color: var(--accent-solid);
-    box-shadow: 0 0 30px rgba(255, 66, 14, 0.3);
+    box-shadow: 0 0 30px color-mix(in srgb, var(--color-orange-red) 30%, transparent);
 }
 
 .spin-category {
@@ -1360,8 +1431,8 @@ textarea:focus {
 }
 
 @keyframes successPulse {
-    0% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 66, 14, 0.2); }
-    100% { transform: scale(1.05); box-shadow: 0 0 40px rgba(255, 66, 14, 0.5); }
+    0% { transform: scale(1); box-shadow: 0 0 20px color-mix(in srgb, var(--color-orange-red) 20%, transparent); }
+    100% { transform: scale(1.05); box-shadow: 0 0 40px color-mix(in srgb, var(--color-orange-red) 50%, transparent); }
 }
 
 /* Responsive Rules - Mobile Bottom Sheet */
@@ -1487,16 +1558,53 @@ textarea:focus {
 @media (max-width: 500px) {
     .app-header {
         padding: 1rem;
+        gap: 0.5rem;
     }
-    
+
+    .header-logo {
+        min-width: 0;
+        gap: 0.5rem;
+    }
+
     .header-logo h1 {
-        font-size: 1.1rem;
+        font-size: 1rem;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    
+
+    .header-controls {
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    /* Hide the text labels and keep only the color-coded toggle switch,
+       since there isn't room for both the title and full labels on narrow screens */
+    .user-selector-container {
+        padding: 0.3rem 0.5rem;
+        gap: 0;
+    }
+
+    .user-label {
+        display: none;
+    }
+
+    .icon-btn {
+        width: 34px;
+        height: 34px;
+    }
+
     .sidebar-actions {
         padding: 0.75rem;
+        grid-template-columns: 1fr 1fr;
     }
-    
+
+    .sidebar-actions button {
+        padding: 0.6rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
     .filters-container {
         padding: 0 0.75rem 0.75rem;
     }
