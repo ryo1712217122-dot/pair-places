@@ -97,12 +97,16 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: calc(1rem + env(safe-area-inset-top, 0px)) 2rem 1rem 2rem;
+    /* max() guarantees clearance even where env(safe-area-inset-top) under-reports
+       (seen on iOS home-screen "web app" launches), while still using the larger,
+       precise notch/Dynamic Island value when it's actually available. 4.75rem covers
+       the tallest current Dynamic Island inset (~59px) plus breathing room. */
+    padding: max(1rem + env(safe-area-inset-top, 0px), 4.75rem) 2rem 1rem 2rem;
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border-color);
     z-index: 1000;
-    min-height: calc(70px + env(safe-area-inset-top, 0px));
+    min-height: max(70px + env(safe-area-inset-top, 0px), 110px);
 }
 
 .header-logo {
