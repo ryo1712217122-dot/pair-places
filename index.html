@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PairMap - ふたりの行きたい場所共有アプリ</title>
+
+    <!-- iOS "Add to Home Screen" support: without these, iOS renders the page edge-to-edge
+         behind the notch/Dynamic Island without reliably reporting env(safe-area-inset-top),
+         so the header ends up hidden behind the status bar. "default" reserves the status
+         bar's own space instead of overlaying it, which avoids depending on safe-area-inset
+         resolving correctly at all. -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PairMap">
+    <meta name="theme-color" content="#fbfafc">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -117,7 +127,7 @@
                 </div>
                 <!-- Tiny Footer for Version -->
                 <div class="sidebar-footer">
-                    <span class="app-version">v1.4.0</span>
+                    <span class="app-version">v1.4.1</span>
                 </div>
             </section>
 
