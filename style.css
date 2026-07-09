@@ -97,11 +97,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    /* env(safe-area-inset-top) now resolves correctly (thanks to the apple-mobile-web-app-*
-       meta tags) but still landed a few px short of clearing the status bar, so a small
-       flat buffer is added on top of it rather than a large fixed floor (which previously
-       double-counted with min-height and made the header far too tall). */
-    padding: calc(1rem + env(safe-area-inset-top, 0px) + 14px) 2rem 1rem 2rem;
+    /* env(safe-area-inset-top) has proven unreliable in this iOS "Add to Home Screen"
+       context (it appears to resolve to ~0 rather than the real notch/Dynamic Island
+       height), so a flat, non-env-dependent minimum is used as the primary mechanism.
+       max() still lets a larger real inset value win if it ever does resolve correctly.
+       NOTE: min-height below is intentionally left untouched at 70px — a previous attempt
+       to also bump min-height double-counted with this padding and made the header huge. */
+    padding: max(calc(1rem + env(safe-area-inset-top, 0px)), 4.5rem) 2rem 1rem 2rem;
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border-color);
