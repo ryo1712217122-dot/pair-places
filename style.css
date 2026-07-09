@@ -1576,7 +1576,16 @@ textarea:focus {
 
 @media (max-width: 500px) {
     .app-header {
-        padding: 1rem;
+        /* Do NOT set padding here: the base .app-header rule already computes a
+           safe-area-aware padding-top (status bar / Dynamic Island clearance).
+           This media query used to unconditionally set padding: 1rem here, which
+           silently won (same specificity, later in source order) and completely
+           nullified every safe-area fix on real phones (this file only ever
+           gets read below 500px on an actual phone). Only override left/right/
+           bottom here; padding-top is inherited from the base rule. */
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-bottom: 1rem;
         gap: 0.5rem;
     }
 
