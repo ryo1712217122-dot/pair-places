@@ -467,11 +467,12 @@ async function saveCloudData(data) {
     if (!response.ok) throw new Error("クラウドへの保存に失敗しました (HTTP " + response.status + ")");
 
     // GAS returns HTTP 200 with { success: false, error } even when doPost fails internally
-    // (e.g. PropertiesService quota exceeded), so the success field must be checked explicitly.
+    // (e.g. a spreadsheet write error), so the success field must be checked explicitly.
     const result = await response.json();
     if (!result.success) {
         throw new Error(result.error || "クラウドへの保存にサーバー側で失敗しました。相手には反映されていません。");
     }
+    return result;
 }
 
 // Fetch Data from Server or GAS Cloud
@@ -1009,31 +1010,20 @@ async function handlePlaceFormSubmit(e) {
                 openDetailModal(placeId);
             }
         } else {
-            // Cloud storage mode (GAS)
+            // Cloud storage mode (GAS): send only this place's create/update as its own
+            // server-side action, instead of overwriting the whole dataset. This avoids
+            // clobbering a concurrent edit/comment made by the other partner in the meantime.
             if (placeId) {
-                const place = places.find(p => p.id === placeId);
-                if (place) {
-                    Object.assign(place, payload);
-                }
+                await saveCloudData({ action: "update_place", id: placeId, place: payload });
+                closeModal(placeModal);
+                await fetchData();
+                openDetailModal(placeId);
             } else {
-                const newPlace = {
-                    id: Math.random().toString(36).substring(2, 10),
-                    ...payload,
-                    comments: []
-                };
-                places.push(newPlace);
-                selectedPlaceId = newPlace.id;
-            }
-
-            await saveCloudData({ settings, places });
-            closeModal(placeModal);
-            renderUI();
-
-            if (selectedPlaceId) {
-                if (placeId) {
-                    openDetailModal(placeId);
-                } else {
-                    selectPlace(selectedPlaceId, false);
+                const result = await saveCloudData({ action: "create_place", place: payload });
+                closeModal(placeModal);
+                await fetchData();
+                if (result && result.place) {
+                    selectPlace(result.place.id, false);
                 }
             }
         }
@@ -1051,17 +1041,12 @@ async function deletePlace(placeId) {
             });
             if (!response.ok) throw new Error("削除に失敗しました");
         } else {
-            places = places.filter(p => p.id !== placeId);
-            await saveCloudData({ settings, places });
+            await saveCloudData({ action: "delete_place", id: placeId });
         }
-        
+
         closeModal(detailModal);
         selectedPlaceId = null;
-        if (isLocal) {
-            await fetchData();
-        } else {
-            renderUI();
-        }
+        await fetchData();
     } catch (error) {
         alert(error.message);
     }
@@ -1097,10 +1082,9 @@ async function handleSettingsFormSubmit(e) {
             closeModal(settingsModal);
             await fetchData();
         } else {
-            settings = newSettings;
-            await saveCloudData({ settings, places });
+            await saveCloudData({ action: "update_settings", settings: newSettings });
             closeModal(settingsModal);
-            renderUI();
+            await fetchData();
         }
     } catch (error) {
         alert(error.message);
@@ -1114,14 +1098,6 @@ async function handleCommentSubmit(e) {
 
     const commentText = document.getElementById("comment-text").value;
     if (!commentText.trim()) return;
-
-    const dateStr = new Date().toLocaleString("ja-JP", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit"
-    }).replace(/\//g, "-");
 
     try {
         if (isLocal) {
@@ -1139,22 +1115,16 @@ async function handleCommentSubmit(e) {
             await fetchData();
             openDetailModal(selectedPlaceId);
         } else {
-            const place = places.find(p => p.id === selectedPlaceId);
-            if (place) {
-                const newComment = {
-                    id: Math.random().toString(36).substring(2, 10),
-                    user: currentUser,
-                    text: commentText,
-                    timestamp: dateStr
-                };
-                place.comments = place.comments || [];
-                place.comments.push(newComment);
-                
-                await saveCloudData({ settings, places });
-                document.getElementById("comment-text").value = "";
-                renderUI();
-                openDetailModal(selectedPlaceId);
-            }
+            // Append this single comment server-side instead of re-sending the whole
+            // places array, so a concurrent edit by the other partner isn't overwritten.
+            await saveCloudData({
+                action: "add_comment",
+                placeId: selectedPlaceId,
+                comment: { user: currentUser, text: commentText }
+            });
+            document.getElementById("comment-text").value = "";
+            await fetchData();
+            openDetailModal(selectedPlaceId);
         }
     } catch (error) {
         alert(error.message);
