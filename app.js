@@ -15,6 +15,10 @@ let currentCategoryFilter = "all";
 let currentTypeFilter = "all";
 let currentStatusFilter = "all";
 
+// Roulette Filters State (independent from the sidebar list filters above)
+let rouletteCategoryFilter = "all";
+let rouletteTypeFilter = "all";
+
 // DOM Elements
 const appTitleDisplay = document.getElementById("app-title-display");
 const user1Label = document.getElementById("user1-label");
@@ -282,7 +286,9 @@ function setupEventListeners() {
         });
     });
 
-    const categoryChips = document.querySelectorAll(".filter-chip");
+    // Scoped to .filters-container so these don't also match same-class tabs used
+    // elsewhere (e.g. the place modal's type/status tabs, or the roulette's own filters).
+    const categoryChips = document.querySelectorAll(".filters-container .filter-chip");
     categoryChips.forEach(chip => {
         chip.addEventListener("click", () => {
             categoryChips.forEach(c => c.classList.remove("active"));
@@ -292,7 +298,7 @@ function setupEventListeners() {
         });
     });
 
-    const typeTabs = document.querySelectorAll(".type-tab");
+    const typeTabs = document.querySelectorAll(".filters-container .type-tab");
     typeTabs.forEach(tab => {
         tab.addEventListener("click", () => {
             typeTabs.forEach(t => t.classList.remove("active"));
@@ -302,13 +308,34 @@ function setupEventListeners() {
         });
     });
 
-    const statusTabs = document.querySelectorAll(".status-tab");
+    const statusTabs = document.querySelectorAll(".filters-container .status-tab");
     statusTabs.forEach(tab => {
         tab.addEventListener("click", () => {
             statusTabs.forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
             currentStatusFilter = tab.getAttribute("data-filter-status");
             renderUI();
+        });
+    });
+
+    // Roulette's own category/type filters, independent of the sidebar list filters.
+    const rouletteCategoryChips = document.querySelectorAll("#roulette-category-filters .filter-chip");
+    rouletteCategoryChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+            rouletteCategoryChips.forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+            rouletteCategoryFilter = chip.getAttribute("data-roulette-category");
+            updateRouletteAvailability();
+        });
+    });
+
+    const rouletteTypeTabs = document.querySelectorAll("#roulette-type-filters .type-tab");
+    rouletteTypeTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            rouletteTypeTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            rouletteTypeFilter = tab.getAttribute("data-roulette-type");
+            updateRouletteAvailability();
         });
     });
 
@@ -925,10 +952,53 @@ function openSettingsModal() {
     openModal(settingsModal);
 }
 
+// Roulette candidates: always "want_to_go", further narrowed by the roulette's own
+// category/type filters (independent of the sidebar list filters).
+function getRouletteCandidates() {
+    return places.filter(p => {
+        if (p.status !== "want_to_go") return false;
+        const catMatch = rouletteCategoryFilter === "all" || p.category === rouletteCategoryFilter;
+        const typeMatch = rouletteTypeFilter === "all" || (p.type || "place") === rouletteTypeFilter;
+        return catMatch && typeMatch;
+    });
+}
+
+// Refresh the instruction text / start button based on the current roulette filters,
+// without resetting the spin card (used when a filter chip is changed mid-modal).
+function updateRouletteAvailability() {
+    const candidates = getRouletteCandidates();
+    const startBtn = document.getElementById("start-roulette-btn");
+    const instruction = document.querySelector(".roulette-instruction");
+
+    const isUnfiltered = rouletteCategoryFilter === "all" && rouletteTypeFilter === "all";
+
+    if (candidates.length === 0) {
+        instruction.textContent = isUnfiltered
+            ? "※ 「行きたい」スポットが登録されていません。リストにスポットを追加してください！"
+            : "※ この条件に合う「行きたい」スポットがありません。条件を変えてみてください。";
+        startBtn.style.display = "none";
+    } else {
+        instruction.textContent = isUnfiltered
+            ? "登録された「行きたい」スポットから、本日の行き先をランダムで決定します！"
+            : `この条件で ${candidates.length} 件のスポットから抽選します！`;
+        startBtn.style.display = "inline-flex";
+    }
+    return candidates;
+}
+
 // Open Roulette Modal
 let isSpinning = false;
 function openRouletteModal() {
-    const candidates = places.filter(p => p.status === "want_to_go");
+    // Reset the roulette's own filters to "all" each time it's opened.
+    rouletteCategoryFilter = "all";
+    rouletteTypeFilter = "all";
+    document.querySelectorAll("#roulette-category-filters .filter-chip").forEach(c => {
+        c.classList.toggle("active", c.getAttribute("data-roulette-category") === "all");
+    });
+    document.querySelectorAll("#roulette-type-filters .type-tab").forEach(t => {
+        t.classList.toggle("active", t.getAttribute("data-roulette-type") === "all");
+    });
+
     const spinCard = document.getElementById("roulette-spin-card");
     const startBtn = document.getElementById("start-roulette-btn");
 
@@ -939,13 +1009,7 @@ function openRouletteModal() {
     startBtn.innerHTML = `<i data-lucide="play-circle"></i>ルーレットを回す！`;
     lucide.createIcons();
 
-    if (candidates.length === 0) {
-        document.querySelector(".roulette-instruction").textContent = "※ 「行きたい」スポットが登録されていません。リストにスポットを追加してください！";
-        startBtn.style.display = "none";
-    } else {
-        document.querySelector(".roulette-instruction").textContent = "登録された「行きたい」スポットから、本日の行き先をランダムで決定します！";
-        startBtn.style.display = "inline-flex";
-    }
+    updateRouletteAvailability();
 
     openModal(rouletteModal);
 }
@@ -1134,8 +1198,8 @@ async function handleCommentSubmit(e) {
 // Start Roulette Spin logic
 document.getElementById("start-roulette-btn").addEventListener("click", () => {
     if (isSpinning) return;
-    
-    const candidates = places.filter(p => p.status === "want_to_go");
+
+    const candidates = getRouletteCandidates();
     if (candidates.length === 0) return;
 
     isSpinning = true;

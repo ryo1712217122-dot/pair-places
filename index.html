@@ -29,7 +29,7 @@
     <!-- Cache-busting query param: bump this on every deploy so browsers/iOS home-screen
          apps that cached style.css under its old unversioned URL are forced to refetch it,
          instead of silently serving a stale copy for up to Cache-Control: max-age=600. -->
-    <link rel="stylesheet" href="style.css?v=1.4.5">
+    <link rel="stylesheet" href="style.css?v=1.5.0">
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -130,7 +130,7 @@
                 </div>
                 <!-- Tiny Footer for Version -->
                 <div class="sidebar-footer">
-                    <span class="app-version">v1.4.5</span>
+                    <span class="app-version">v1.5.0</span>
                 </div>
             </section>
 
@@ -371,7 +371,30 @@
             </div>
             <div class="modal-body roulette-body">
                 <p class="roulette-instruction">登録された「行きたい」スポットから、本日の行き先をランダムで決定します！</p>
-                
+
+                <div class="roulette-filters">
+                    <div class="filter-group">
+                        <label>カテゴリ</label>
+                        <div class="category-filters" id="roulette-category-filters">
+                            <button type="button" class="filter-chip active" data-roulette-category="all">すべて</button>
+                            <button type="button" class="filter-chip" data-roulette-category="food"><span class="chip-dot dot-food"></span>グルメ</button>
+                            <button type="button" class="filter-chip" data-roulette-category="scenic"><span class="chip-dot dot-scenic"></span>絶景・観光</button>
+                            <button type="button" class="filter-chip" data-roulette-category="activity"><span class="chip-dot dot-activity"></span>遊ぶ・体験</button>
+                            <button type="button" class="filter-chip" data-roulette-category="shopping"><span class="chip-dot dot-shopping"></span>お買い物</button>
+                            <button type="button" class="filter-chip" data-roulette-category="lodging"><span class="chip-dot dot-lodging"></span>宿泊</button>
+                            <button type="button" class="filter-chip" data-roulette-category="other"><span class="chip-dot dot-other"></span>その他</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>タイプ</label>
+                        <div class="type-filters" id="roulette-type-filters">
+                            <button type="button" class="type-tab active" data-roulette-type="all">すべて</button>
+                            <button type="button" class="type-tab" data-roulette-type="place">行きたい場所</button>
+                            <button type="button" class="type-tab" data-roulette-type="todo">やりたいこと</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="roulette-display-container">
                     <div class="roulette-wheel" id="roulette-wheel">
                         <div class="roulette-card-spin" id="roulette-spin-card">
@@ -396,6 +419,6 @@
             crossorigin=""></script>
             
     <!-- Custom JavaScript -->
-    <script src="app.js?v=1.4.5"></script>
+    <script src="app.js?v=1.5.0"></script>
 </body>
 </html>
