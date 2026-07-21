@@ -123,6 +123,76 @@ function initTheme() {
     applyThemePalette(savedThemeId);
 }
 
+// --- Fluid Motion Utilities -------------------------------------------------
+// Small dependency-free helpers for gesture-driven animation (mobile bottom
+// sheet drag): a damped spring driven by damping-ratio + response (seconds)
+// instead of raw stiffness/damping, momentum projection so a flick lands
+// where it's headed rather than at the release point, and rubber-banding so
+// dragging past a hard edge resists instead of stopping dead.
+
+function prefersReducedMotion() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// Animates `from` -> `to`, handing off `velocity` (px/s) so a released
+// gesture continues without a visible seam between finger and animation.
+// damping 1.0 settles with no overshoot; lower values overshoot and bounce,
+// which should only be used after a gesture that actually carried momentum.
+function animateSpring({ from, to, velocity = 0, damping = 1, response = 0.35, onUpdate, onComplete }) {
+    if (prefersReducedMotion()) {
+        onUpdate(to);
+        if (onComplete) onComplete();
+        return { cancel() {} };
+    }
+
+    const stiffness = Math.pow((2 * Math.PI) / response, 2);
+    const dampingCoefficient = (4 * Math.PI * damping) / response;
+
+    let position = from;
+    let currentVelocity = velocity;
+    let lastTime = null;
+    let rafId = null;
+    let cancelled = false;
+
+    function frame(now) {
+        if (cancelled) return;
+        if (lastTime === null) lastTime = now;
+        // Clamp dt so a throttled/backgrounded tab doesn't launch the sheet
+        // across the screen in one jump when the tab regains focus.
+        const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+        lastTime = now;
+
+        const displacement = position - to;
+        const acceleration = -stiffness * displacement - dampingCoefficient * currentVelocity;
+        currentVelocity += acceleration * dt;
+        position += currentVelocity * dt;
+
+        const settled = Math.abs(position - to) < 0.5 && Math.abs(currentVelocity) < 20;
+        if (settled) {
+            onUpdate(to);
+            if (onComplete) onComplete();
+            return;
+        }
+        onUpdate(position);
+        rafId = requestAnimationFrame(frame);
+    }
+    rafId = requestAnimationFrame(frame);
+    return { cancel: () => { cancelled = true; cancelAnimationFrame(rafId); } };
+}
+
+// Projects where a flick "wants to land" from its release velocity, using
+// the same exponential-decay curve iOS uses for scroll deceleration (this is
+// NOT the v²/2a textbook formula).
+function projectMomentum(velocityPxPerSec, decelerationRate = 0.998) {
+    return ((velocityPxPerSec / 1000) * decelerationRate) / (1 - decelerationRate);
+}
+
+// Progressive resistance past a hard boundary: dragging past the end of the
+// sheet slows down instead of hitting a wall, then springs back on release.
+function rubberband(overshoot, dimension, constant = 0.55) {
+    return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
+}
+
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
     initTheme();
@@ -362,24 +432,77 @@ function setupEventListeners() {
         }
     });
 
-    // Mobile Bottom Sheet Toggle & Touch Swipe Drag Gesture
+    // Mobile Bottom Sheet Toggle & Drag Gesture
     const sheetToggle = document.getElementById("sheet-toggle");
     const sidebarSection = document.querySelector(".sidebar-section");
     const handleArrow = document.getElementById("handle-arrow");
 
     if (sheetToggle && sidebarSection) {
+        const sheetHeight = window.innerHeight * 0.7; // matches the 70% height set in CSS
+        const OPEN_Y = 0;
+        const COLLAPSED_Y = sheetHeight - 60; // 60px is the handle bar height
+
+        // The sheet's live on-screen position. Drag, click-toggle and the
+        // release spring all read/write this so every animation starts from
+        // where the sheet actually is, never from a stale logical state.
+        let currentY = window.innerWidth <= 900 ? COLLAPSED_Y : OPEN_Y;
+        let activeSpring = null;
+        let isDragging = false;
+        let wasDragging = false;
+        let startY = 0;
+        let startTranslateY = 0;
+        let velocityHistory = []; // recent {t, y} samples, used to compute release velocity
+
+        function setSheetY(y) {
+            currentY = y;
+            sidebarSection.style.transform = `translateY(${y}px)`;
+        }
+
+        function setHandleIcon(isCollapsed) {
+            if (!handleArrow) return;
+            handleArrow.setAttribute("data-lucide", isCollapsed ? "chevron-up" : "chevron-down");
+            lucide.createIcons();
+        }
+
         // Default to collapsed state on mobile screen sizes on load
         if (window.innerWidth <= 900) {
             sidebarSection.classList.add("collapsed");
-            if (handleArrow) {
-                handleArrow.setAttribute("data-lucide", "chevron-up");
-            }
-        } else {
-            if (handleArrow) {
-                handleArrow.setAttribute("data-lucide", "chevron-down");
-            }
         }
-        lucide.createIcons();
+        setHandleIcon(window.innerWidth <= 900);
+
+        // Springs to a resting position (open or collapsed) and hands off the
+        // given release velocity so there's no seam between the finger and
+        // the animation. damping 0.8 / response 0.3 is Apple's own drawer/
+        // sheet spec — the slight overshoot is only appropriate here because
+        // this always plays after a momentum-carrying release (or a tap,
+        // treated as a zero-velocity flick).
+        function springToTarget(targetY, { velocity = 0, damping = 0.8, response = 0.3 } = {}) {
+            if (activeSpring) activeSpring.cancel();
+            const isCollapsed = targetY === COLLAPSED_Y;
+            setHandleIcon(isCollapsed);
+            sidebarSection.style.transition = "none"; // the JS spring owns the transform now
+
+            activeSpring = animateSpring({
+                from: currentY,
+                to: targetY,
+                velocity,
+                damping,
+                response,
+                onUpdate: setSheetY,
+                onComplete: () => {
+                    activeSpring = null;
+                    sidebarSection.classList.toggle("collapsed", isCollapsed);
+                    sidebarSection.style.transition = "";
+                    sidebarSection.style.transform = ""; // let the CSS class rule take over at rest
+                }
+            });
+        }
+
+        function toggleBottomSheet(forceState = null) {
+            const isCollapsed = forceState !== null ? forceState : !sidebarSection.classList.contains("collapsed");
+            // A tap carries no momentum, so it settles with no overshoot.
+            springToTarget(isCollapsed ? COLLAPSED_Y : OPEN_Y, { damping: 1 });
+        }
 
         // Click to toggle
         sheetToggle.addEventListener("click", (e) => {
@@ -387,95 +510,64 @@ function setupEventListeners() {
             toggleBottomSheet();
         });
 
-        function toggleBottomSheet(forceState = null) {
-            let isCollapsed;
-            if (forceState !== null) {
-                isCollapsed = forceState;
-                sidebarSection.classList.toggle("collapsed", isCollapsed);
-            } else {
-                isCollapsed = sidebarSection.classList.toggle("collapsed");
-            }
-            
-            sidebarSection.style.transform = ""; // Reset inline drag style to let CSS handle it
-            if (handleArrow) {
-                if (isCollapsed) {
-                    handleArrow.setAttribute("data-lucide", "chevron-up");
-                } else {
-                    handleArrow.setAttribute("data-lucide", "chevron-down");
-                }
-                lucide.createIcons();
-            }
-        }
-
-        // Swipe Drag Gesture variables
-        let startY = 0;
-        let isDragging = false;
-        let wasDragging = false;
-        let startTranslateY = 0;
-        const sheetHeight = window.innerHeight * 0.7; // 70% height
-        const collapsedTranslateY = sheetHeight - 60; // 60px is handle bar height
-
-        sheetToggle.addEventListener("touchstart", (e) => {
+        // Drag: 1:1 tracking with rubber-banding past the bounds, and a
+        // short position/time history so release velocity can be computed.
+        sheetToggle.addEventListener("pointerdown", (e) => {
             if (window.innerWidth > 900) return;
-            startY = e.touches[0].clientY;
+            if (activeSpring) activeSpring.cancel();
+            sheetToggle.setPointerCapture(e.pointerId);
+
+            startY = e.clientY;
+            startTranslateY = currentY;
             isDragging = true;
             wasDragging = false;
-            
-            // Calculate starting translateY based on state
-            const isCollapsed = sidebarSection.classList.contains("collapsed");
-            startTranslateY = isCollapsed ? collapsedTranslateY : 0;
-            
-            sidebarSection.style.transition = "none"; // Disable CSS smooth transition during manual drag
-            e.stopPropagation();
-        }, { passive: true });
+            velocityHistory = [{ t: performance.now(), y: e.clientY }];
+            sidebarSection.style.transition = "none";
+        });
 
-        sheetToggle.addEventListener("touchmove", (e) => {
+        sheetToggle.addEventListener("pointermove", (e) => {
             if (!isDragging) return;
-            const currentY = e.touches[0].clientY;
-            const deltaY = currentY - startY;
-            
-            // Mark as dragging if movement is meaningful (more than 5px)
-            if (Math.abs(deltaY) > 5) {
-                wasDragging = true;
-            }
-            
-            let targetTranslateY = startTranslateY + deltaY;
-            // Limit bounds: 0 (fully open) to collapsedTranslateY (fully closed)
-            targetTranslateY = Math.max(0, Math.min(collapsedTranslateY, targetTranslateY));
-            
-            sidebarSection.style.transform = `translateY(${targetTranslateY}px)`;
-            
-            // CRITICAL: Stop propagation to prevent Leaflet Map from capturing drag/pan event
-            e.stopPropagation();
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-        }, { passive: false });
+            const deltaY = e.clientY - startY;
+            if (Math.abs(deltaY) > 5) wasDragging = true;
 
-        sheetToggle.addEventListener("touchend", (e) => {
+            velocityHistory.push({ t: performance.now(), y: e.clientY });
+            if (velocityHistory.length > 5) velocityHistory.shift();
+
+            let targetY = startTranslateY + deltaY;
+            if (targetY < OPEN_Y) {
+                targetY = OPEN_Y - rubberband(OPEN_Y - targetY, sheetHeight);
+            } else if (targetY > COLLAPSED_Y) {
+                targetY = COLLAPSED_Y + rubberband(targetY - COLLAPSED_Y, sheetHeight);
+            }
+            setSheetY(targetY);
+
+            // Stop Leaflet from treating this as a map pan/zoom gesture.
+            e.stopPropagation();
+        });
+
+        function endDrag(e) {
             if (!isDragging) return;
             isDragging = false;
-            sidebarSection.style.transition = ""; // Restore CSS smooth transition
-            
-            const currentY = e.changedTouches[0].clientY;
-            const deltaY = currentY - startY;
-            const isCollapsed = sidebarSection.classList.contains("collapsed");
-            
-            if (wasDragging) {
-                // Determine next state based on swipe direction and distance
-                if (isCollapsed && deltaY < -50) {
-                    // Swiped up: Expand
-                    toggleBottomSheet(false);
-                } else if (!isCollapsed && deltaY > 50) {
-                    // Swiped down: Collapse
-                    toggleBottomSheet(true);
-                } else {
-                    // Cancel swipe: Snap back to original state
-                    toggleBottomSheet(isCollapsed);
-                }
-            }
+            sidebarSection.style.transition = "";
+
+            if (!wasDragging) return; // a plain tap; the click handler owns this case
+
+            const first = velocityHistory[0];
+            const last = velocityHistory[velocityHistory.length - 1];
+            const dt = (last.t - first.t) / 1000;
+            const releaseVelocity = dt > 0 ? (last.y - first.y) / dt : 0; // px/s
+
+            // Land on whichever resting position the flick is actually
+            // headed toward, not just the nearer one from the release point.
+            const projectedY = currentY + projectMomentum(releaseVelocity);
+            const targetY = Math.abs(projectedY - OPEN_Y) < Math.abs(projectedY - COLLAPSED_Y) ? OPEN_Y : COLLAPSED_Y;
+
+            springToTarget(targetY, { velocity: releaseVelocity });
             e.stopPropagation();
-        }, { passive: true });
+        }
+
+        sheetToggle.addEventListener("pointerup", endDrag);
+        sheetToggle.addEventListener("pointercancel", endDrag);
     }
 }
 
