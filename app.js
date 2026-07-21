@@ -218,7 +218,7 @@ function initMap() {
     }).addTo(map);
 
     map.on("dblclick", (e) => {
-        openAddPlaceModal(e.latlng.lat, e.latlng.lng);
+        openAddPlaceModal(e.latlng.lat, e.latlng.lng, { x: e.originalEvent.clientX, y: e.originalEvent.clientY });
     });
 }
 
@@ -243,9 +243,9 @@ function setupEventListeners() {
         btn.addEventListener("click", () => setThemePalette(btn.dataset.themeId));
     });
 
-    document.getElementById("add-place-btn").addEventListener("click", () => openAddPlaceModal());
-    document.getElementById("roulette-btn").addEventListener("click", openRouletteModal);
-    document.getElementById("settings-btn").addEventListener("click", openSettingsModal);
+    document.getElementById("add-place-btn").addEventListener("click", (e) => openAddPlaceModal(null, null, rectCenter(e.currentTarget)));
+    document.getElementById("roulette-btn").addEventListener("click", (e) => openRouletteModal(rectCenter(e.currentTarget)));
+    document.getElementById("settings-btn").addEventListener("click", (e) => openSettingsModal(rectCenter(e.currentTarget)));
 
     document.getElementById("close-place-modal").addEventListener("click", () => closeModal(placeModal));
     document.getElementById("cancel-place-form").addEventListener("click", () => closeModal(placeModal));
@@ -724,7 +724,7 @@ function renderPlacesList(filtered = getFilteredPlaces()) {
             </div>
         `;
 
-        card.addEventListener("click", () => selectPlace(place.id, false));
+        card.addEventListener("click", (e) => selectPlace(place.id, false, rectCenter(e.currentTarget)));
         placesList.appendChild(card);
     });
 
@@ -774,9 +774,9 @@ function updateMapMarkers() {
         } else {
             const marker = L.marker([place.latitude, place.longitude], { icon: customIcon }).addTo(map);
             
-            marker.on("click", () => {
-                selectPlace(place.id, false);
-                openDetailModal(place.id);
+            marker.on("click", (e) => {
+                const originPoint = e.originalEvent ? { x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null;
+                selectPlace(place.id, false, originPoint);
             });
 
             const popupContent = document.createElement("div");
@@ -786,9 +786,9 @@ function updateMapMarkers() {
                 <div class="popup-desc">${place.description ? place.description.substring(0, 40) + '...' : ''}</div>
                 <button class="popup-btn">詳細・相談を開く</button>
             `;
-            
-            popupContent.querySelector(".popup-btn").addEventListener("click", () => {
-                openDetailModal(place.id);
+
+            popupContent.querySelector(".popup-btn").addEventListener("click", (e) => {
+                openDetailModal(place.id, rectCenter(e.currentTarget));
             });
 
             marker.bindPopup(popupContent);
@@ -806,7 +806,7 @@ function updateMapMarkers() {
 }
 
 // Select place in list and map
-function selectPlace(placeId, zoom = true) {
+function selectPlace(placeId, zoom = true, originPoint = null) {
     selectedPlaceId = placeId;
     renderPlacesList();
     updateMapMarkers();
@@ -819,12 +819,37 @@ function selectPlace(placeId, zoom = true) {
                 map.setView([place.latitude, place.longitude], 15);
             }
         }
-        openDetailModal(placeId);
+        openDetailModal(placeId, originPoint);
     }
 }
 
 // Modals Utilities
-function openModal(modal) {
+
+// Viewport-space center point of an element, used as a modal's growth origin.
+function rectCenter(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+// originPoint (viewport {x, y}) is whatever the user just tapped — the "+
+// スポットを追加" button, a place card, a map marker. The modal-card is
+// already laid out (the overlay has no display:none, only opacity:0), so its
+// rect can be read before the open transition starts, and the open animation
+// scales out from that point instead of the card's own center. Closing
+// reverses along the same path automatically, since the origin is left in
+// place until the next open recomputes it.
+function openModal(modal, originPoint = null) {
+    const card = modal.querySelector(".modal-card");
+    if (card) {
+        if (originPoint) {
+            const cardRect = card.getBoundingClientRect();
+            const originX = ((originPoint.x - cardRect.left) / cardRect.width) * 100;
+            const originY = ((originPoint.y - cardRect.top) / cardRect.height) * 100;
+            card.style.transformOrigin = `${originX}% ${originY}%`;
+        } else {
+            card.style.transformOrigin = ""; // no clear trigger: grow from center
+        }
+    }
     modal.classList.add("active");
 }
 
@@ -834,7 +859,7 @@ function closeModal(modal) {
 }
 
 // Open Add Place Modal
-function openAddPlaceModal(lat = null, lng = null) {
+function openAddPlaceModal(lat = null, lng = null, originPoint = null) {
     document.getElementById("place-id").value = "";
     document.getElementById("place-title").value = "";
     document.getElementById("place-description").value = "";
@@ -872,12 +897,12 @@ function openAddPlaceModal(lat = null, lng = null) {
 
     document.getElementById("modal-title").textContent = "新規追加";
     document.getElementById("save-place-btn").textContent = "保存する";
-    
-    openModal(placeModal);
+
+    openModal(placeModal, originPoint);
 }
 
 // Open Detail Modal
-function openDetailModal(placeId) {
+function openDetailModal(placeId, originPoint = null) {
     const place = places.find(p => p.id === placeId);
     if (!place) return;
 
@@ -947,8 +972,9 @@ function openDetailModal(placeId) {
 
     const editBtn = document.getElementById("detail-edit-btn");
     editBtn.onclick = () => {
+        const editOrigin = rectCenter(editBtn);
         closeModal(detailModal);
-        openEditPlaceModal(place);
+        openEditPlaceModal(place, editOrigin);
     };
 
     const deleteBtn = document.getElementById("detail-delete-btn");
@@ -959,7 +985,7 @@ function openDetailModal(placeId) {
     };
 
     renderComments(place.comments || []);
-    openModal(detailModal);
+    openModal(detailModal, originPoint);
     lucide.createIcons();
 }
 
@@ -995,7 +1021,7 @@ function renderComments(commentsList) {
 }
 
 // Open Edit Place Modal
-function openEditPlaceModal(place) {
+function openEditPlaceModal(place, originPoint = null) {
     document.getElementById("place-id").value = place.id;
     document.getElementById("place-title").value = place.title;
     document.getElementById("place-description").value = place.description || "";
@@ -1031,17 +1057,17 @@ function openEditPlaceModal(place) {
 
     document.getElementById("modal-title").textContent = "スポット情報を編集";
     document.getElementById("save-place-btn").textContent = "変更を保存";
-    
-    openModal(placeModal);
+
+    openModal(placeModal, originPoint);
 }
 
 // Open Settings Modal
-function openSettingsModal() {
+function openSettingsModal(originPoint = null) {
     document.getElementById("settings-app-title").value = settings.title;
     document.getElementById("settings-user1").value = settings.user1;
     document.getElementById("settings-user2").value = settings.user2;
     document.getElementById("settings-gas-url").value = GAS_URL === "YOUR_GAS_WEB_APP_URL_HERE" ? "" : GAS_URL;
-    openModal(settingsModal);
+    openModal(settingsModal, originPoint);
 }
 
 // Roulette candidates: always "want_to_go", further narrowed by the roulette's own
@@ -1080,7 +1106,8 @@ function updateRouletteAvailability() {
 
 // Open Roulette Modal
 let isSpinning = false;
-function openRouletteModal() {
+let activeRouletteSpring = null;
+function openRouletteModal(originPoint = null) {
     // Reset the roulette's own filters to "all" each time it's opened.
     rouletteCategoryFilter = "all";
     rouletteTypeFilter = "all";
@@ -1090,6 +1117,12 @@ function openRouletteModal() {
     document.querySelectorAll("#roulette-type-filters .type-tab").forEach(t => {
         t.classList.toggle("active", t.getAttribute("data-roulette-type") === "all");
     });
+
+    if (activeRouletteSpring) {
+        activeRouletteSpring.cancel();
+        activeRouletteSpring = null;
+    }
+    isSpinning = false;
 
     const spinCard = document.getElementById("roulette-spin-card");
     const startBtn = document.getElementById("start-roulette-btn");
@@ -1103,7 +1136,7 @@ function openRouletteModal() {
 
     updateRouletteAvailability();
 
-    openModal(rouletteModal);
+    openModal(rouletteModal, originPoint);
 }
 
 // Form Handlers & API Submissions
@@ -1111,7 +1144,11 @@ function openRouletteModal() {
 // Save or Update Place
 async function handlePlaceFormSubmit(e) {
     e.preventDefault();
-    
+
+    // e.submitter is the "保存する"/"変更を保存" button that was actually
+    // pressed, so the detail modal that replaces this form grows from there.
+    const submitOrigin = e.submitter ? rectCenter(e.submitter) : null;
+
     const placeId = document.getElementById("place-id").value;
     const title = document.getElementById("place-title").value;
     const description = document.getElementById("place-description").value;
@@ -1161,9 +1198,9 @@ async function handlePlaceFormSubmit(e) {
             await fetchData();
             
             if (!placeId && resData.place) {
-                selectPlace(resData.place.id, false);
+                selectPlace(resData.place.id, false, submitOrigin);
             } else if (placeId) {
-                openDetailModal(placeId);
+                openDetailModal(placeId, submitOrigin);
             }
         } else {
             // Cloud storage mode (GAS): send only this place's create/update as its own
@@ -1173,13 +1210,13 @@ async function handlePlaceFormSubmit(e) {
                 await saveCloudData({ action: "update_place", id: placeId, place: payload });
                 closeModal(placeModal);
                 await fetchData();
-                openDetailModal(placeId);
+                openDetailModal(placeId, submitOrigin);
             } else {
                 const result = await saveCloudData({ action: "create_place", place: payload });
                 closeModal(placeModal);
                 await fetchData();
                 if (result && result.place) {
-                    selectPlace(result.place.id, false);
+                    selectPlace(result.place.id, false, submitOrigin);
                 }
             }
         }
@@ -1288,6 +1325,17 @@ async function handleCommentSubmit(e) {
 }
 
 // Start Roulette Spin logic
+//
+// Instead of cycling through candidates on a fixed, hand-tuned timeout
+// schedule and picking the winner independently of what's on screen, this
+// throws the candidate list like a real reel: a randomized initial velocity
+// is projected forward with the same momentum-projection curve iOS uses for
+// scroll deceleration (projectMomentum, §6), and that projected landing spot
+// IS the winner — the spin you watch is the actual randomization, not a
+// decoration in front of a separately-rolled result. The reel position is
+// then driven there by the same damped-spring animator as the bottom sheet
+// (animateSpring, §4/§5), so it accelerates hard and decelerates smoothly
+// with one continuous motion instead of discrete ticks.
 document.getElementById("start-roulette-btn").addEventListener("click", () => {
     if (isSpinning) return;
 
@@ -1306,10 +1354,6 @@ document.getElementById("start-roulette-btn").addEventListener("click", () => {
 
     spinCard.className = "roulette-card-spin active-spin";
 
-    let index = 0;
-    let delay = 60;
-    let timer = null;
-
     const catMap = {
         food: "グルメ",
         scenic: "絶景・観光",
@@ -1319,42 +1363,51 @@ document.getElementById("start-roulette-btn").addEventListener("click", () => {
         other: "その他"
     };
 
-    const cycle = () => {
-        const currentPlace = candidates[index];
-        spinCategory.textContent = catMap[currentPlace.category] || "その他";
-        spinCategory.className = `spin-category cat-tag ${currentPlace.category}`;
-        spinTitle.textContent = currentPlace.title;
-        
-        index = (index + 1) % candidates.length;
+    const renderAt = (index) => {
+        const place = candidates[((index % candidates.length) + candidates.length) % candidates.length];
+        spinCategory.textContent = catMap[place.category] || "その他";
+        spinCategory.className = `spin-category cat-tag ${place.category}`;
+        spinTitle.textContent = place.title;
+        return place;
+    };
 
-        if (delay < 500) {
-            delay += delay * 0.12;
-            timer = setTimeout(cycle, delay);
-        } else {
-            clearTimeout(timer);
-            
-            const winnerIndex = Math.floor(Math.random() * candidates.length);
-            const winner = candidates[winnerIndex];
-            
-            spinCategory.textContent = catMap[winner.category] || "その他";
-            spinCategory.className = `spin-category cat-tag ${winner.category}`;
-            spinTitle.textContent = winner.title;
-            
+    // A wide, randomized initial velocity so the projected distance spans
+    // many multiples of most candidate-list lengths (near-uniform outcomes),
+    // and each spin still feels a little different in how far it travels.
+    const initialVelocity = 80 + Math.random() * 140; // "items" per second
+    const projectedDistance = projectMomentum(initialVelocity, 0.998);
+
+    let lastRenderedIndex = null;
+    activeRouletteSpring = animateSpring({
+        from: 0,
+        to: projectedDistance,
+        velocity: initialVelocity,
+        damping: 0.9, // a slight wobble as it settles, like a wheel catching on its stop
+        response: 1.4,
+        onUpdate: (position) => {
+            const index = Math.floor(position);
+            if (index !== lastRenderedIndex) {
+                lastRenderedIndex = index;
+                renderAt(index);
+            }
+        },
+        onComplete: () => {
+            activeRouletteSpring = null;
+            const winner = renderAt(Math.round(projectedDistance));
+
             spinCard.className = "roulette-card-spin winner";
             isSpinning = false;
-            
+
             startBtn.disabled = false;
             startBtn.innerHTML = `<i data-lucide="refresh-cw"></i>もう一度まわす`;
             lucide.createIcons();
 
             setTimeout(() => {
                 closeModal(rouletteModal);
-                selectPlace(winner.id, false);
+                selectPlace(winner.id, false, rectCenter(spinCard));
             }, 1800);
         }
-    };
-
-    timer = setTimeout(cycle, delay);
+    });
 });
 
 // Helper to escape HTML to prevent XSS

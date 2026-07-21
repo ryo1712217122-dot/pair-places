@@ -873,10 +873,14 @@ button {
     max-width: 550px;
     box-shadow: var(--shadow-lg);
     overflow: hidden;
-    transform: translateY(12px) scale(0.96);
+    transform: translateY(10px) scale(0.9);
     opacity: 0;
     /* Opening a modal is a tap, not a flick, so it settles like a critically
-       damped spring (no overshoot) rather than bouncing past its resting size. */
+       damped spring (no overshoot) rather than bouncing past its resting size.
+       transform-origin is set from JS to the button that triggered the open
+       (see openModal()), so the card visibly grows out of that button instead
+       of just materializing at its own center; it falls back to center when
+       there's no clear trigger (e.g. a programmatic reopen). */
     transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 
     max-height: 90vh;
